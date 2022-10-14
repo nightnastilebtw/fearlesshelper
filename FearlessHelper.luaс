@@ -1,0 +1,2307 @@
+script_name('FearlessHelper')
+script_author('night')
+script_version(1.35)
+
+local enable_autoupdate = true -- false to disable auto-update + disable sending initial telemetry (server, moonloader version, script version, samp nickname, virtual volume serial number)
+
+local keys = require "vkeys"
+local imgui = require("imgui")
+local sw, sh = getScreenResolution()
+local encoding = require ("encoding")
+local inicfg = require("inicfg")
+local sampev = require('lib.samp.events')
+local dlstatus = require('moonloader').download_status
+local mem = require "memory"
+local window = imgui.ImBool(false)
+local tag = '{9461FF}[FearlessHelper] {FFFFFF}'
+local adsend = false
+
+
+local state = false
+local radius = 1000000
+local color = 0x00FF00FF
+local pool = {}
+local image 
+local image1
+local imagerifa 
+local imagenw
+local imageballas
+local imagevagos
+local imageskport
+local priton1
+local priton2
+local priton3
+local priton4
+local priton5
+local priton6
+local priton7
+local priton8
+
+
+
+local imadd = require 'imgui_addons'
+local rkeys = require 'rkeys'
+local button = { }
+button[1] = false 
+button[2] = false
+button[3] = false
+button[4] = false
+button[6] = false
+button[7] = false
+button[8] = false
+button[9] = false
+button[10] = false
+button[11] = false
+button[12] = false
+button[12] = false
+
+
+
+tableguns = {
+    ['de'] = 348,
+    ['m4'] = 356,
+    ['uz'] = 352,
+    ['ak'] = 355,
+    ['mp5'] = 353,
+	['shg'] = 349,
+	['rfl'] = 357
+}
+gname, ammoclip, findedgun = 'nothing', -1, false
+local active = true
+local click_delay = 120 
+local tds = {
+    ['prev'] = {id = -1, text = 'LD_BEAT:chit', x = 233, y = 215},  -- default id: 131
+    ['next'] = {id = -1, text = 'LD_BEAT:chit', x = 390, y = 215},  -- default id: 130
+    ['max'] = {id = -1, text = '0', x = 320, y = 199},              -- default id: 2064
+    ['fill'] = {id = -1, text = 'FILL', x = 375, y = 243},          -- default id: 144
+    ['fuel_name'] = {id = -1, text = 'DIESEL', x = 301, y = 218}    -- default id: 2063
+}
+
+
+local clists = {
+	-- Advance RP
+	{
+		0xFF009900, -- grove.
+		0xFFCC00FF, -- ballas.
+		0xFFFFCD00, -- vagos.
+		0xFF6666FF, -- rifa.
+		0xFF00CCFF, -- aztec.
+		0xFF993366, -- lcn.
+		0xFFBB0000, -- yakuza.
+		0xFF007575, -- russian mafia.
+		0x00222222, -- masked.
+		0x11FFFFFF, -- bomj.
+	},
+	-- Samp RP
+	{
+		0xAA09A400, -- grove.
+		0xAAC515FF, -- ballas.
+		0xAAFFDE24, -- vagos.
+		0xAA2EA07B, -- rifa.
+		0xAA0DEDFF, -- aztec.
+		0xAAF4C400, -- lcn.
+		0xAAFF0606, -- yakuza.
+		0xAA114D71, -- russian mafia.
+		0xAA383838, -- masked.
+		0x00FFFFFF, -- bomj.
+	},
+	-- Pears Project
+	{
+		0xAA00CC00, -- grove.
+		0xAA9900CC, -- ballas.
+		0xAAFFCC33, -- vagos.
+		0xAA00FFFF, -- aztecas.
+		0xAACCCC00, -- lcn.
+		0xAA990000, -- yakuza.
+		0xAA333333, -- russian mafia.
+		0xAA663300, -- arabian mafia.
+		0x00FFFFFF, -- hitmans.
+		0x20FFFFFF -- bomj.
+	},
+	-- Arizona RP
+	{
+		0x99009327, -- grove.
+		0x99CC00CC, -- ballas.
+		0x996666FF, -- rifa.
+		0x99D1DB1C, -- vagos.
+		0x9900FFE2, -- aztecas.
+        0x80A87878, -- nw.
+		0x80993366, -- lcn.
+		0x80298CB7, -- russian mafia.
+		0x80960202, -- yakuza.
+		0x80BA541D, -- warlock.
+		0x15FDFCFC -- bomj.
+	},
+	-- Diamond RP (not working)
+	{
+		0xAA009900, -- grove.
+		0xAACC00FF, -- ballas.
+		0xAAFBD400, -- vagos.
+		0xAA6666FF, -- rifa.
+		0xAA1060AC, -- aztec.
+	}
+}
+
+local texts = {
+	-- advance rp
+	'Grove: {$CLR}$CNT {FFFFFF}| Ballas: {$CLR}$CNT {FFFFFF}| Vagos: {$CLR}$CNT {FFFFFF}| Rifa: {$CLR}$CNT {FFFFFF}| Aztecas: {$CLR}$CNT\nLCN: {$CLR}$CNT {FFFFFF}| Yakuza: {$CLR}$CNT {FFFFFF}| Russian Mafia: {$CLR}$CNT\nMasked: {$CLR}$CNT {FFFFFF}| Bomj: {$CLR}$CNT',
+	-- samp rp
+	'Grove: {$CLR}$CNT {FFFFFF}| Ballas: {$CLR}$CNT {FFFFFF}| Vagos: {$CLR}$CNT {FFFFFF}| Rifa: {$CLR}$CNT {FFFFFF}| Aztecas: {$CLR}$CNT\nLCN: {$CLR}$CNT {FFFFFF}| Yakuza: {$CLR}$CNT {FFFFFF}| Russian Mafia: {$CLR}$CNT\nMasked: {$CLR}$CNT {FFFFFF}| Bomj: {$CLR}$CNT',
+	-- pears project
+	'Grove: {$CLR}$CNT {FFFFFF}| Ballas: {$CLR}$CNT {FFFFFF}| Vagos: {$CLR}$CNT {FFFFFF}| Aztecas: {$CLR}$CNT {FFFFFF}| LCN: {$CLR}$CNT\nYakuza: {$CLR}$CNT {FFFFFF}| Russian Mafia: {$CLR}$CNT {FFFFFF}| Arabian Mafia: {$CLR}$CNT {FFFFFF}| Hitmans: {$CLR}$CNT {FFFFFF}| Bomj: {$CLR}$CNT',
+	-- arizona rp
+	'Grove: {$CLR}$CNT {FFFFFF}| Ballas: {$CLR}$CNT {FFFFFF}| Rifa: {$CLR}$CNT {FFFFFF}| Vagos: {$CLR}$CNT {FFFFFF}| Aztecas: {$CLR}$CNT\nNight Wolves: {$CLR}$CNT {FFFFFF}'
+}
+
+local ALL_MENU_TDS = { {id = 2062, x = 245, y = 187}, {id = 115, x = 331, y = 257}, {id = 2063, x = 301, y = 218}, {id = 116, x = 223, y = 257}, {id = 2064, x = 320, y = 199}, {id = 117, x = 387, y = 177}, {id = 118, x = 235, y = 183}, {id = 119, x = 234, y = 192}, {id = 120, x = 222, y = 176}, {id = 121, x = 229, y = 210}, {id = 122, x = 387, y = 210}, {id = 123, x = 243, y = 203}, {id = 124, x = 223, y = 178}, {id = 125, x = 228, y = 183}, {id = 126, x = 234, y = 195}, {id = 127, x = 229, y = 190}, {id = 128, x = 232, y = 198}, {id = 129, x = 244, y = 186}, {id = 130, x = 390, y = 215}, {id = 131, x = 233, y = 215}, {id = 132, x = 397, y = 217}, {id = 133, x = 239, y = 217}, {id = 134, x = 301, y = 199}, {id = 135, x = 350, y = 197}, {id = 136, x = 289, y = 197}, {id = 137, x = 388, y = 234}, {id = 138, x = 338, y = 234}, {id = 139, x = 229, y = 235}, {id = 140, x = 276, y = 235}, {id = 141, x = 243, y = 241}, {id = 142, x = 353, y = 241}, {id = 143, x = 266, y = 243}, {id = 144, x = 375, y = 243}, {id = 2062, x = 245, y = 187}, {id = 2062, x = 245, y = 187}, {id = 2062, x = 245, y = 187}, {id = 2062, x = 245, y = 187}, {id = 2062, x = 245, y = 187} }
+
+encoding.default = "CP1251"
+u8 = encoding.UTF8
+
+defaultState = false
+bike = {[481] = true, [509] = true, [510] = true, [15882] = true}
+moto = {[448] = true, [461] = true, [462] = true, [463] = true, [468] = true, [471] = true, [521] = true, [522] = true, [523] = true, [581] = true,}
+
+local mainIni = inicfg.load({ -- CFG
+    mode = 1, 
+    settings = {
+        rp_invite = false,
+        faminvite = false,
+        karta = false,
+        actnabor = false,
+        radiosf = false,
+        radiolv = false,
+        radiols = false,
+        otmena = false,
+        actflood = false,
+        actfam = false,
+        prospammer = false,
+        spawn_cars = true,
+        fill_cars = true, 
+		sklad = true,
+        skins = true,
+        rank = true,
+        fastmute = false,
+        fastuval = false,
+        muteminutes = 1,
+        radio = 1,
+        famint = 1,
+        orugie = 1,
+        orgint = 1,
+        orgint2 = 1,
+        kolvodrugs = 3,
+        nabint = 1,
+        inv_ranks = 1,
+        minlvl = 3,
+        Styles = 4,
+        inv_famrank = 1,
+        deaglepatrons = 50,
+        m4patrons = 100,
+        mutetext = 'Помехи в рацию.',
+        uvaltext = 'Выселен.',
+        prospamtext1 = 'Тут может быть ваш текст.',
+        prospamtext2 = 'Тут может быть ваш текст.',
+        prospamtext3 = 'Тут может быть ваш текст.',
+        sbivtext = 'FearlessHelper top!',
+        CmdM4 = true,
+        CmdDe = true,
+        nabor = false,
+        bankparol = true,
+        famflood = false,
+        autosklad = false,
+        stylebutton = false,
+        car1 = false,
+        skladarrows = false,
+        deaglesklad = false,
+        glavokno = false,
+        closesklad = false,
+        skladsocr = false,
+        m4sklad = false, 
+        shotgunsklad = false,
+        riflesklad = false,
+        bind1 = false,
+        bind2 = false,
+        bind3 = false,
+        bind4 = false,
+        bind5 = false,
+        bind6 = false,
+        bind7 = false,
+        bind8 = false,
+        bind9 = false,
+        bind10 = false,
+        styles = false,
+        vipnabor = false,
+        parolbank = 'Ваш пароль',
+        nabortext1 = 'Ваш текст',
+        nabortext2 = 'Ваш текст2',
+        nabortext3 = 'Ваш текст3',
+        famtext3 = 'Ваш текст3',
+        blacklist = ''
+    }
+}, "fearlesshelper")
+local mutetext = imgui.ImBuffer(u8(mainIni.settings.mutetext), 256)
+local uvaltext = imgui.ImBuffer(u8(mainIni.settings.uvaltext), 256)
+local prospamtext1 = imgui.ImBuffer(u8(mainIni.settings.prospamtext1), 256)
+local sbivtext = imgui.ImBuffer(u8(mainIni.settings.sbivtext), 256)
+local prospamtext2 = imgui.ImBuffer(u8(mainIni.settings.prospamtext2), 256)
+local prospamtext3 = imgui.ImBuffer(u8(mainIni.settings.prospamtext3), 256)
+local nabortext1 = imgui.ImBuffer(u8(mainIni.settings.nabortext1), 256)
+local nabortext2 = imgui.ImBuffer(u8(mainIni.settings.nabortext2), 256)
+local nabortext3 = imgui.ImBuffer(u8(mainIni.settings.nabortext3), 256)
+local famtext3 = imgui.ImBuffer(u8(mainIni.settings.famtext3), 256)
+local parolbank = imgui.ImBuffer(u8(mainIni.settings.parolbank), 256)
+local nabor = imgui.ImBool(mainIni.settings.nabor)
+local famflood = imgui.ImBool(mainIni.settings.famflood)
+local bankparol = imgui.ImBool(mainIni.settings.bankparol)
+local autosklad = imgui.ImBool(mainIni.settings.autosklad)
+local stylebutton = imgui.ImBool(mainIni.settings.stylebutton)
+local car1 = imgui.ImBool(mainIni.settings.car1)
+local m4sklad = imgui.ImBool(mainIni.settings.m4sklad)
+local deaglesklad = imgui.ImBool(mainIni.settings.deaglesklad)
+local glavokno = imgui.ImBool(mainIni.settings.glavokno)
+local closesklad = imgui.ImBool(mainIni.settings.closesklad)
+local ComboStyle = imgui.ImInt(mainIni.settings.Styles)
+local skladsocr = imgui.ImBool(mainIni.settings.skladsocr)
+local shotgunsklad = imgui.ImBool(mainIni.settings.shotgunsklad)
+local riflesklad = imgui.ImBool(mainIni.settings.riflesklad)
+local bind1 = imgui.ImBool(mainIni.settings.bind1)
+local bind2 = imgui.ImBool(mainIni.settings.bind2)
+local bind3 = imgui.ImBool(mainIni.settings.bind3)
+local bind4 = imgui.ImBool(mainIni.settings.bind4)
+local bind5 = imgui.ImBool(mainIni.settings.bind5)
+local bind6 = imgui.ImBool(mainIni.settings.bind6)
+local bind7 = imgui.ImBool(mainIni.settings.bind7)
+local bind8 = imgui.ImBool(mainIni.settings.bind8)
+local bind9 = imgui.ImBool(mainIni.settings.bind9)
+local vipnabor = imgui.ImBool(mainIni.settings.vipnabor)
+local bind10 = imgui.ImBool(mainIni.settings.bind10)
+local skladarrows = imgui.ImBool(mainIni.settings.skladarrows)
+local styles = imgui.ImBool(mainIni.settings.styles)
+local blacklist = imgui.ImBuffer(u8(mainIni.settings.blacklist), 256)
+local rp_invite = imgui.ImBool(mainIni.settings.rp_invite)
+local karta = imgui.ImBool(mainIni.settings.karta)
+local actnabor = imgui.ImBool(mainIni.settings.actnabor)
+local radiosf = imgui.ImBool(mainIni.settings.radiosf)
+local radiols = imgui.ImBool(mainIni.settings.radiols)
+local otmena = imgui.ImBool(mainIni.settings.otmena)
+local radiolv = imgui.ImBool(mainIni.settings.radiolv)
+local actfam = imgui.ImBool(mainIni.settings.actfam)
+local actflood = imgui.ImBool(mainIni.settings.actflood)
+local faminvite = imgui.ImBool(mainIni.settings.faminvite)
+local inv_ranks = imgui.ImInt(mainIni.settings.inv_ranks)
+local minlvl = imgui.ImInt(mainIni.settings.minlvl)
+local inv_famrank = imgui.ImInt(mainIni.settings.inv_famrank)
+local deaglepatrons = imgui.ImInt(mainIni.settings.deaglepatrons)
+local m4patrons = imgui.ImInt(mainIni.settings.m4patrons)
+local muteminutes = imgui.ImInt(mainIni.settings.muteminutes)
+local famint = imgui.ImInt(mainIni.settings.famint)
+local orugie = imgui.ImInt(mainIni.settings.orugie)
+local rstat = imgui.ImInt(3)
+
+local orgint = imgui.ImInt(mainIni.settings.orgint)
+local orgint2 = imgui.ImInt(mainIni.settings.orgint2)
+local kolvodrugs = imgui.ImInt(mainIni.settings.kolvodrugs)
+local nabint = imgui.ImInt(mainIni.settings.nabint)
+local skins = imgui.ImBool(mainIni.settings.skins)
+local rank = imgui.ImBool(mainIni.settings.rank)
+local prospammer = imgui.ImBool(mainIni.settings.prospammer)
+local spawn_cars = imgui.ImBool(mainIni.settings.spawn_cars)
+local fill_cars = imgui.ImBool(mainIni.settings.fill_cars)
+local sklad = imgui.ImBool(mainIni.settings.sklad)
+local fastmute = imgui.ImBool(mainIni.settings.fastmute)
+local fastuval = imgui.ImBool(mainIni.settings.fastuval)
+
+
+
+
+--------------пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+
+
+
+
+
+--------------------------
+
+
+local status = inicfg.load(mainIni, 'fearlesshelper.ini')
+if not doesFileExist('moonloader/config/fearlesshelper.ini') then inicfg.save(mainIni, 'fearlesshelper.ini') end
+
+
+local functionslist = [[
+    Функции Fearless Helper:
+    /sc - Быстрый спавн транспорта банды
+    /fc - Быстрая заправка транспорта банды
+    /sk - Открытие/закрытие склада банды
+    /spamm - Запустить флуд в чат банды
+    /fspam - Запустить флуд в чат фамы
+    /fm [ID] - Быстрый мут
+    /fu [ID] - Быстрое увольнение
+    /gs [ID] [SkinID] - Быстрая выдача скина
+    /gr [ID] [Rank] - Быстрая выдача ранга
+    /cb - Узнать онлайн всех банд и мафий
+    /bcl - Очистить буфер памяти
+    /cde [amount] - Сделать дигла [Из Материалов]
+    /cm4 [amount] - Сделать эмки  [Из Материалов]
+    /de [amount] - Взять Deagle из Инвентаря
+    /m4 [amount] - Взять M4 из Инвентаря
+    /uz [amount] - Взять Uzi из Инвентаря
+    /rfl [amount] - Взять Country Rifle из Инвентаря
+    /ak [amount] - Взять AK-47 из Инвентаря
+    /shg [amount] - Взять Shotgun из Инвентаря
+    
+    Зажимаете shift + w - Ускоряетесь на мото или вело
+    За основу был взят Ghetto Helper]]
+----------------------------------------------------------------------
+--пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
+----------------------------------------------------------------------
+function main()
+    while not isSampAvailable() do wait(200) end
+    autoupdate("https://raw.githubusercontent.com/nightnastilebtw/fearlesshelper/main/version.json", '['..string.upper(thisScript().name)..']: ', "https://vk.com/fearlessqd")
+    local font = renderCreateFont("Arial", 10, 5)
+	sampAddChatMessage(tag..'Успешно загружен! Настройка: {9461FF}/fh(elper) или же с помощью клавиши F3!', -1)
+    sampRegisterChatCommand('fh', function() window.v = not window.v end)
+	sampRegisterChatCommand('fhelper', function() window.v = not window.v end)
+    sampRegisterChatCommand('cb', function()
+		local text = texts[current_server]
+		for i = 1, #clists[current_server] do
+			local online = 0
+			for l = 0, 1004 do
+				if sampIsPlayerConnected(l) then
+					if sampGetPlayerColor(l) == clists[current_server][i] then online = online + 1 end
+				end
+			end
+			text = text:gsub('$CLR', ('%06X'):format(bit.band(clists[current_server][i], 0xFFFFFF)), 1)
+			text = text:gsub('$CNT', online, 1)
+		end
+		for w in text:gmatch('[^\r\n]+') do sampAddChatMessage(w, -1)end
+	end)
+    
+    sampRegisterChatCommand('sc', sc)
+    sampRegisterChatCommand('fc', fc)
+	sampRegisterChatCommand('sk', sk)
+	sampRegisterChatCommand("fm", fm)
+    sampRegisterChatCommand('drmap', drmap)
+    sampRegisterChatCommand("fu", fu)
+    sampRegisterChatCommand("gs", skins)
+    sampRegisterChatCommand('gr', rank)
+    sampRegisterChatCommand('asklad', avtosklad)
+    sampRegisterChatCommand('vra', function(text) 
+        adsend = true
+        sampSendChat('/vr '..text)
+    end)
+    sampRegisterChatCommand('vr', function(text)
+        adsend = false
+        sampSendChat('/vr '..text)
+    end)
+	if sampGetGamestate() == 3 then
+        current_server = getCurrentServer(sampGetCurrentServerName())
+    end
+    sampRegisterChatCommand('de',function(arg) getguninvent('de',arg) end)
+    image = imgui.CreateTextureFromFile("moonloader/sczones/groove.jpg")
+    image1 = imgui.CreateTextureFromFile("moonloader/sczones/aztec.jpg")
+    imagerifa = imgui.CreateTextureFromFile("moonloader/sczones/rifa.jpg")
+    imageballas = imgui.CreateTextureFromFile("moonloader/sczones/ballas.jpg")
+    imagevagos = imgui.CreateTextureFromFile("moonloader/sczones/vagos.jpg")
+    imagenw = imgui.CreateTextureFromFile("moonloader/sczones/nw.jpg")
+    imageskport = imgui.CreateTextureFromFile("moonloader/sczones/portzone.jpg")
+    priton1 = imgui.CreateTextureFromFile("moonloader/sczones/priton1.jpg")
+    priton2 = imgui.CreateTextureFromFile("moonloader/sczones/priton2.jpg")
+    priton3 = imgui.CreateTextureFromFile("moonloader/sczones/priton3.jpg")
+    priton4 = imgui.CreateTextureFromFile("moonloader/sczones/priton4.jpg")
+    priton5 = imgui.CreateTextureFromFile("moonloader/sczones/priton5.jpg")
+    priton6 = imgui.CreateTextureFromFile("moonloader/sczones/priton6.jpg")
+    priton7 = imgui.CreateTextureFromFile("moonloader/sczones/priton7.jpg")
+    priton8 = imgui.CreateTextureFromFile("moonloader/sczones/priton8.jpg")
+    sampRegisterChatCommand('m4',function(arg) getguninvent('m4',arg) end)
+    sampRegisterChatCommand('uz',function(arg) getguninvent('uz',arg) end)
+    sampRegisterChatCommand('ak',function(arg) getguninvent('ak',arg) end)
+    sampRegisterChatCommand('mp5',function(arg) getguninvent('mp5',arg) end)
+    sampRegisterChatCommand('shg',function(arg) getguninvent('shg',arg) end)
+    sampRegisterChatCommand('rfl',function(arg) getguninvent('rfl',arg) end)
+    sampRegisterChatCommand('probiv', cmd_probiv)
+    sampRegisterChatCommand("bcl", _con)
+    sampRegisterChatCommand("cde", function(arg)
+        if mainIni.settings.CmdDe then
+            lua_thread.create(function()
+                if arg == '' or arg == nil or arg == 0 then
+                    sampAddChatMessage(tag..'Введите кол-во патрон', -1)
+                else
+                    ptde = arg
+                    sampSendChat('/creategun')
+                    wait(100)
+                    sampSendDialogResponse(7546, 1, 0, _)
+                    wait(100)
+                    sampSetCurrentDialogEditboxText(ptde)
+                    wait(100)
+                    sampCloseCurrentDialogWithButton(1)
+                end
+            end)
+        else 
+            sampSendChat('/1')
+        end
+     end)
+     sampRegisterChatCommand("cm4", function(arg)
+        if mainIni.settings.CmdM4 then
+            lua_thread.create(function()
+                if arg == '' or arg == nil or arg == 0 then
+                    sampAddChatMessage(tag..'Введите кол-во патрон', -1)
+                else
+                    ptm4 = arg
+                    sampSendChat('/creategun')
+                    wait(100)
+                    sampSendDialogResponse(7546, 1, 3, _)
+                    wait(100)
+                    sampSetCurrentDialogEditboxText(ptm4)
+                    wait(100)
+                    sampCloseCurrentDialogWithButton(1)
+                end
+            end)
+        else 
+            sampSendChat('/1')
+        end
+    end)
+   
+
+----------------------------------------------------------------------
+--РЕГИСТРИРОВАНИЕ КОМАНД СВЕРХУ
+----------------------------------------------------------------------
+
+
+    while true do --пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
+        wait(0)
+        if isKeyJustPressed(0x72) and not sampIsChatInputActive() and not sampIsDialogActive() then
+            window.v = not window.v
+            
+        end
+        
+        if isKeyDown(0x12) and isKeyJustPressed(0x31) and bind1.v and not sampIsChatInputActive() and not sampIsDialogActive() then
+            sampSendChat("/usedrugs 3")
+            wait(100)
+            sampSendChat(sbivtext.v)
+        
+        end
+        if isKeyDown(0x12) and isKeyJustPressed(0x32) and bind2.v and not sampIsChatInputActive() and not sampIsDialogActive() then
+            sampSendChat("/usedrugs 3")
+            
+        
+        end
+        if isKeyDown(0x12) and isKeyJustPressed(0x33) and bind3.v and not sampIsChatInputActive() and not sampIsDialogActive() then
+            sampSendChat("/armour")
+            
+        
+            
+        end
+        if isKeyDown(0x12) and isKeyJustPressed(0x34) and bind4.v and not sampIsChatInputActive() and not sampIsDialogActive() then
+            sampSendChat("/mask")
+            
+        end
+        if isKeyJustPressed(0x52) and not sampIsChatInputActive() and bind9.v and not sampIsDialogActive() then
+            sampSendChat("q") 
+        
+        end
+        if isKeyDown(0x12) and isKeyJustPressed(0x35) and bind5.v and not sampIsChatInputActive() and not sampIsDialogActive() then
+            sampProcessChatInput("/de "..deaglepatrons.v)
+       
+        end
+        if isKeyDown(0x12) and isKeyJustPressed(0x36) and bind6.v and not sampIsChatInputActive() and not sampIsDialogActive() then
+            sampProcessChatInput("/m4 "..m4patrons.v)
+            
+        end
+        if isKeyJustPressed(0x4C) and bind8.v and not sampIsChatInputActive() and not sampIsDialogActive() then
+            sampSendChat("/lock")
+            
+        end
+       
+        if isKeyDown(0x12) and isKeyJustPressed(0x30) and bind7.v and not sampIsChatInputActive() and not sampIsDialogActive() then
+            sampSendChat("/point")
+            
+        end
+
+        if isKeyDown(0x12) and isKeyJustPressed(0x51) and bind10.v and not sampIsChatInputActive() and not sampIsDialogActive() then
+            sampSendChat("/anim 9")
+            
+        end
+        if skladsocr.v and isKeyJustPressed(0x31) and not sampIsChatInputActive() and not sampIsDialogActive() then
+            wait(100)
+            sampProcessChatInput("/sk")
+           
+        end
+        if skladsocr.v and isKeyJustPressed(0x32) and not sampIsChatInputActive() and not sampIsDialogActive() then
+            wait(100)
+            sampProcessChatInput("/sc")
+        end
+        if skladsocr.v and isKeyJustPressed(0x33) and not sampIsChatInputActive() and not sampIsDialogActive() then
+            wait(100)
+            sampProcessChatInput("/fc")
+        end
+        if car1.v and isKeyJustPressed(0x30) then
+            wait(0)
+            sampSendChat("/cars")
+        end
+  
+        if isCharOnAnyBike(playerPed) and isKeyCheckAvailable() and isKeyDown(0xA0) then	-- onBike&onMoto SpeedUP [[LSHIFT]] --
+			if bike[getCarModel(storeCarCharIsInNoSave(playerPed))] then
+				setGameKeyState(16, 255)
+				wait(10)
+				setGameKeyState(16, 0)
+			elseif moto[getCarModel(storeCarCharIsInNoSave(playerPed))] then
+				setGameKeyState(1, -128)
+				wait(10)
+				setGameKeyState(1, 0)
+			end
+		end
+        if faminvite.v then
+            local result, target = getCharPlayerIsTargeting(playerHandle)
+            if result then result, playerid = sampGetPlayerIdByCharHandle(target) end 
+            if result and isKeyJustPressed(0x58) then 
+                name = sampGetPlayerNickname(playerid) 
+                wait(10)
+                sampSendChat('/faminvite '..playerid)
+                    wait(3000)
+                    if inv_famrank.v ~= 1 and inv_famrank.v ~= nil then
+                    sampSendChat('/setfrank '..playerid..' '..inv_famrank.v)
+                    end
+                    wait(250)
+                    sampAddChatMessage(tag..'Вы приняли игрока в семью с ником: '..name..' | Ранг: '..inv_famrank.v, -1)
+                    
+                
+            end
+        end
+        
+        
+		
+		if isCharOnFoot(playerPed) and isKeyDown(0x31) and isKeyCheckAvailable() then -- onFoot&inWater SpeedUP [[1]] --
+			setGameKeyState(16, 256)
+			wait(10)
+			setGameKeyState(16, 0)
+		elseif isCharInWater(playerPed) and isKeyDown(0x31) and isKeyCheckAvailable() then
+			setGameKeyState(16, 256)
+			wait(10)
+			setGameKeyState(16, 0)
+		end
+        if state then
+			local A = { getCharCoordinates(PLAYER_PED) }
+			for i, B in ipairs(coords) do
+				local dist = getDistanceBetweenCoords3d(A[1], A[2], A[3], B[1], B[2], B[3])
+				if dist <= radius and pool[i] == nil then
+					pool[i] = addBlipForCoord(B[1], B[2], B[3])
+					changeBlipColour(pool[i], color)
+				elseif dist > radius and pool[i] ~= nil then
+					removeBlip(pool[i])
+					pool[i] = nil
+				end
+			end
+		end
+    
+        if rp_invite.v then
+            local result, target = getCharPlayerIsTargeting(playerHandle)
+            if result then result, playerid = sampGetPlayerIdByCharHandle(target) end 
+            if result and isKeyJustPressed(0x5A)  then 
+                _, id = sampGetPlayerIdByCharHandle(target)
+			    if sampIsPlayerConnected(id) then
+				lvl, name = sampGetPlayerScore(id), sampGetPlayerNickname(id)
+				if tonumber(lvl) >= tonumber(mainIni.settings.minlvl) then 
+                    sampSendChat('/me передал бандану')
+                    wait(1000)
+                    sampSendChat('/invite '..playerid)
+                    wait(250)
+                    sampAddChatMessage(tag..'Вы приняли игрока с ником: '..name..' | Ранг:  '..inv_ranks.v, -1)
+                else
+                    wait(100)
+                    sampAddChatMessage(tag..'У игрока уровень недостаточно высок!', -1)
+                end
+            end
+            end
+        end
+
+        
+
+
+        imgui.Process = window.v
+    end
+    end
+    
+                
+                
+            
+              
+  
+function encda()
+    commandslist.v = u8:encode(functionslist)
+end
+
+commandslist = imgui.ImBuffer(65536)
+
+
+
+function skins(param)
+	if state then
+		state = false
+	elseif not param:match('%d+') then
+		sampAddChatMessage(tag..'Правильный ввод: /gs [ID] [SkinID]', -1)
+	else
+			id = tonumber(param)
+			state = true
+			sampSendChat('/giveskin '..param..' '..param..'')
+            sampSendDialogResponse(9188, 1, 0, -1)
+            sampCloseCurrentDialogWithButton(0)
+			state = false
+	end
+end
+
+function rank(param)
+	if state then
+		state = false
+	elseif not param:match('%d+') then
+		sampAddChatMessage(tag..'Правильный ввод: /gr [ID] [Rank]', -1)
+	else
+			id = tonumber(param)
+			state = true
+			sampSendChat('/giverank '..param..' '..param..'')
+			state = false
+	end
+end
+
+function fm(param)
+    if fastmute.v then
+	if state then
+		state = false
+	elseif not param:match('%d+') then
+		sampAddChatMessage(tag..'Правильный ввод: /fm [ID]', -1)
+	else
+			id = tonumber(param)
+			state = true
+			sampSendChat('/fmute '..param..' '..muteminutes.v..' '..u8:decode(mutetext.v), -1)
+			state = false
+    end
+	end
+end
+
+function fu(param)
+	if state then
+		state = false
+	elseif not param:match('%d+') then
+		sampAddChatMessage(tag..'Правильный ввод: /fu [ID]', -1)
+	else
+			id = tonumber(param)
+			state = true
+			sampSendChat('/uninvite '..param..' '..u8:decode(uvaltext.v), -1)
+			state = false
+	end
+end
+
+
+function nameTagOn()
+    local pStSet = sampGetServerSettingsPtr();
+    NTdist = mem.getfloat(pStSet + 39)
+    NTwalls = mem.getint8(pStSet + 47)
+    NTshow = mem.getint8(pStSet + 56)
+    mem.setfloat(pStSet + 39, 1488.0)
+    mem.setint8(pStSet + 47, 0)
+    mem.setint8(pStSet + 56, 1)
+    nameTag = true
+end
+  
+function nameTagOff()
+    local pStSet = sampGetServerSettingsPtr();
+    mem.setfloat(pStSet + 39, NTdist)
+    mem.setint8(pStSet + 47, NTwalls)
+    mem.setint8(pStSet + 56, NTshow)
+    nameTag = false
+end
+
+
+
+
+function imgui.OnDrawFrame()
+    if window.v then
+        imgui.SetNextWindowPos(imgui.ImVec2(sw / 2, sh / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+        imgui.SetNextWindowSize(imgui.ImVec2(1050, 480), imgui.Cond.FirstUseEver)
+        imgui.Begin('Fearless Helper', window, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoResize )  
+        local btn_size = imgui.ImVec2(-0.1, 0)
+        imgui.BeginChild("##8", imgui.ImVec2(178, 355), true)
+        if imgui.Button(u8('Главная'), btn_size) then
+            for i = 0,11 do
+                button[i] = false
+            end
+            button[1] = not button[1]
+        
+        end
+        if imgui.Button(u8('Для лидеров или 9'), btn_size) then
+            for i = 0,11 do
+                button[i] = false
+            end
+            button[2] = not button[2]
+        end
+        if imgui.Button(u8('Другие функции'), btn_size) then
+            for i = 0,11 do
+                button[i] = false
+            end
+            button[3] = not button[3]
+        end
+        if imgui.Button(u8('Бинды'), btn_size) then
+            for i = 0,11 do
+                button[i] = false
+            end
+            button[4] = not button[4]
+        end
+        imgui.Separator()
+        imgui.CenterTextColoredRGB('{778899} Prescott')
+        if imgui.Button(u8('Правила NRP каптов'), btn_size) then
+            for i = 0,11 do
+                button[i] = false
+            end
+            button[5] = not button[5]
+        end
+        if imgui.Button(u8('Правила RP каптов'), btn_size) then
+            for i = 0,11 do
+                button[i] = false
+            end
+            button[6] = not button[6]
+        end
+        if imgui.Button(u8('СК Зоны RP Банд'), btn_size) then
+            for i = 0,11 do
+                button[i] = false
+            end
+            button[9] = not button[9]
+        end
+        if imgui.Button(u8('СК Зоны NRP Банд'), btn_size) then
+            for i = 0,11 do
+                button[i] = false
+            end
+            button[10] = not button[10]
+        end
+        if imgui.Button(u8('Правила Порта'), btn_size) then
+            for i = 0,11 do
+                button[i] = false
+            end
+            button[7] = not button[7]
+        end
+        if imgui.Button(u8('Правила Аирдропа'), btn_size) then
+            for i = 0,11 do
+                button[i] = false
+            end
+            button[8] = not button[8]
+        end
+        if imgui.Button(u8('Правила Притонов'), btn_size) then
+            for i = 0,11 do
+                button[i] = false
+            end
+            button[11] = not button[11]
+        end
+        
+    
+       
+        
+      
+            imgui.EndChild()
+            imgui.SameLine()
+            imgui.BeginChild("##61", imgui.ImVec2(826, 355), true)
+    
+    
+    
+            
+        
+        
+            if button[1] then
+                imgui.CenterTextColoredRGB('{45e9f5be}Информация')
+                imgui.TextColoredRGB('{D3D3D3}Fearless Helper')
+                imgui.TextColoredRGB('{D3D3D3}vers: {00FF00}1.35')
+                imgui.TextColoredRGB('{778899}Автор: {D3D3D3}Night')
+                imgui.Separator()
+                imgui.Text(u8'Лог Обновлений')
+                imgui.Separator()
+                if imgui.CollapsingHeader(u8'1.35') then
+                    imgui.TextQuestion(u8'Обновление меню, сделал более свежим')
+                end
+                if imgui.CollapsingHeader(u8'1.3') then
+                    imgui.TextQuestion(u8'Добавил правила, скзоны, множество другого чего но мне лень все писать, крч смотрите')
+                end
+                if imgui.CollapsingHeader(u8'1.2') then
+                    imgui.TextQuestion(u8'Добавил в чекер банд NW, добавил активацию флудеров по кнопке(что-бы консоль не засирать), добавил карту закладок(с лаунчера не работает)')
+                end
+                if imgui.CollapsingHeader(u8'1.0') then
+                    imgui.TextQuestion(u8'Исправил /cb, добавил возможность спавнить все свои кары по кнопке, исправил мелкие баги, изменил оформление, добавил быстрый инвайт в семью и автовыдачу ранга в семье.')
+                end
+                if imgui.CollapsingHeader(u8'0.9') then
+                    imgui.TextQuestion(u8'Сделал абсолютно новое меню, переписал систему рп инвайта, оптимизировал код')
+                end
+                if imgui.CollapsingHeader(u8'0.8') then
+                    imgui.TextQuestion(u8'Множество фиксов, добавил автоматизацию склада, оптимизировал код, переписал систему набора(теперь не вылазит /ad совсем), переписал систему открытия склада и т.д, теперь если использовать через автоматизацию склада по кнопкам 1,2,3,4 не открывает совсем менюшку')
+                end
+                if imgui.CollapsingHeader(u8'0.7') then
+                    imgui.TextQuestion(u8'Добавил возможность выбора кол-ва дигла и м4 через биндер, добавил возможность ставить свой текст для сбива(В бинде ALT+1), сделал автоломку не по команде а по кнопке, модернизировал имгуи')
+                end
+                if imgui.CollapsingHeader(u8'0.6') then
+                    imgui.TextQuestion(u8'Переработал системы автоввода пинкода, автозапрвки, перенес их активацию на кнопку, изменен немного стиль, добавил функцию включения и выключения биндов')
+                end
+                if imgui.CollapsingHeader(u8'0.5') then
+                    imgui.TextQuestion(u8'Добавлено автообновление, фикс скрипта(теперь не нужно релоадить при входе в игру), добавлен автосклад(с возможностью выбора ганов)')
+                end
+                if imgui.CollapsingHeader(u8'0.4') then
+                    imgui.TextQuestion(u8'Поправлено imgui, замена бинда на alt+1[Было: /usemed - Стало: /usedrugs 3 + сбив], добавлены новые бинды, добавлена возможность открывать меню на F3, в Флудер набора добавлена возможность писать в радиостанцию(/ad), добавлен автоматический ввод пароля в банке/банкомате [/pb], добавлена функция включить флудер в фамчат, изменена система флудера в организацию(достаточно теперь один раз написать команду и скрипт запустит флудер) добавлена возможность выбирать самому КД набора/флуда в банду/фамчат')
+                end
+                if imgui.CollapsingHeader(u8'0.3') then
+                    imgui.TextQuestion(u8'Добавлен чекер онлайна банд, изменено название хелпера, добавлены новые бинды, оптимизирован код, фикс биндов - теперь при открытом чате не работают, добавлен флудер о наборе')
+                end
+                if imgui.CollapsingHeader(u8'0.2') then
+                    imgui.TextQuestion(u8'Убрал карту закладок, оптимизировал код, добавил FastGun,добавил AutoGasFill')
+                end
+                if imgui.CollapsingHeader(u8'0.1') then
+                imgui.TextQuestion(u8'Добавил ФПСАпы, карту закладок В гетто, убрал дождь(тоже фпс бустит), убрал лишние функции, новых 8 стилей интерфейса, быстрый крафт оружия и автопрокачку ломки, автопробив, скип бесполезных диалогов, випчат хелпер, ускорение на шифт для мотоциклов или велосипедов')
+                end
+                imgui.Separator()
+                if imgui.CollapsingHeader(u8'Функции Fearless Helper') then
+
+                imgui.Text(u8'/sc - Быстрый спавн транспорта банды')
+                imgui.Text(u8'/fc - Быстрая заправка транспорта банды')
+                imgui.Text(u8'/sk - Открытие/закрытие склада банды')
+                imgui.Text(u8'/fm [ID] - Быстрый мут')
+                imgui.Text(u8'/fu [ID] - Быстрое увольнение')
+                imgui.Text(u8'/gs [ID] [SkinID] - Быстрая выдача скина')
+                imgui.Text(u8'/gr [ID] [Rank] - Быстрая выдача ранга')
+                imgui.Text(u8'/cb - Узнать онлайн всех банд и мафий')
+                imgui.Text(u8'/bcl - Очистить буфер памяти')
+                imgui.Text(u8'/cde [amount] - Сделать дигла [Из Материалов]')
+                imgui.Text(u8'/cm4 [amount] - Сделать эмки  [Из Материалов]')
+                imgui.Text(u8'/de [amount] - Взять Deagle из Инвентаря')
+                imgui.Text(u8'/m4 [amount] - Взять M4 из Инвентаря')
+                imgui.Text(u8'/uz [amount] - Взять Uzi из Инвентаря')
+                imgui.Text(u8'/rfl [amount] - Взять Country Rifle из Инвентаря')
+                imgui.Text(u8'/ak [amount] - Взять AK-47 из Инвентаря')
+                imgui.Text(u8'/shg [amount] - Взять Shotgun из Инвентаря')
+                imgui.Text(u8'Зажимаете shift - Ускоряетесь на мото или вело(не спидхак')
+                imgui.Separator()
+                
+                          
+                
+                end
+            
+                imgui.TextColoredRGB('{00FF00}ЕСЛИ У ВАС БАГИ ИЛИ ВЫЛЕТЫ ПИШИТЕ В ВК')
+                
+                
+            
+                imgui.TextColoredRGB('{00FF00}Если у вас есть идеи по улучшению так-же пишите в вк(ссылка снизу)')
+                if imgui.Button(u8'Night[VK]',imgui.ImVec2(170,30)) then
+                    os.execute('start https://vk.com/danilo_chernov')
+                end
+                
+                imgui.SameLine()
+                if imgui.Button(u8'Group[VK]',imgui.ImVec2(170,30)) then
+                    os.execute('start https://vk.com/fearlessqd')
+                end  
+
+                end
+            end
+            if button[2] then
+
+                imgui.PushItemWidth(85.5)
+                    imgui.TextQuestion(u8'Автоматически будет отправлять инвайт с отыгровкой. Активация: ПКМ + Z')
+                    imgui.SameLine()
+                    imgui.Checkbox(u8'Быстрый инвайт', rp_invite)
+                    if rp_invite.v then
+                        imgui.NullText()
+                        imgui.SameLine()
+                        imgui.InputInt(u8'Ранг при инвайте', inv_ranks)
+                        imgui.NullText()
+                        imgui.SameLine()
+                        imgui.SliderInt(u8'Минимальный уровень', minlvl, 1, 10, 1.0)
+                    end
+                        if inv_ranks.v <= 0 or inv_ranks.v >= 9 then
+                            inv_ranks.v = 1
+                    end
+                    
+                        
+                    
+                    
+                    
+                    imgui.PushItemWidth(120)
+                    imgui.TextQuestion(u8'Быстрая выдача мута члену банды. Активация: /fm [ID]')
+                    imgui.SameLine()
+                    imgui.Checkbox(u8'Быстрый мут', fastmute)
+                    if fastmute.v then
+                        imgui.NullText()
+                        imgui.SameLine()
+                        imgui.SliderInt(u8"Кол-во минут мута", muteminutes, 1, 60, 1.0)
+                        imgui.NullText()
+                        imgui.SameLine()
+                        imgui.InputText(u8'Причина мута', mutetext)
+                    end
+                    imgui.TextQuestion(u8'Быстрое увольнение члена банды. Активация: /fu [ID]')
+                    imgui.SameLine()
+                    imgui.Checkbox(u8'Быстрое увольнение', fastuval)
+                    if fastuval.v then
+                        imgui.NullText()
+                        imgui.SameLine()
+                        imgui.InputText(u8'Причина увольнения', uvaltext)
+                    end
+                    imgui.PushItemWidth(290)
+                    imgui.TextQuestion(u8'Проспамить правилами/информацией. Значение устанавливайте в секундах. Активация: /spamm')
+                    imgui.SameLine()
+                    imgui.Checkbox(u8'Флудер организации', prospammer)
+                    if prospammer.v then
+                        imgui.NullText()
+                        imgui.SameLine()
+                        imgui.InputText(u8'##1', prospamtext1)
+                        imgui.NullText()
+                        imgui.SameLine()
+                        imgui.InputText(u8'##2', prospamtext2)
+                        imgui.NullText()
+                        imgui.SameLine()
+                        imgui.InputText(u8'##3', prospamtext3)
+                        imgui.TextQuestion(u8'Устанавливает КД между вашими сообщениями в секунде. Если поставили допустим секунды - тогда отправиться первое сообщение и спустя 3 секунды уже второе')
+                        imgui.SameLine()
+                        imgui.SliderInt(u8"КД между сообщениями ", orgint, 1, 180, 1.0)
+                        imgui.TextQuestion(u8'Устанавливает задержку между срабатываением флудера')
+                        imgui.SameLine()
+                        imgui.SliderInt(u8"КД между работой флудера", orgint2, 1, 300, 1.0)
+                        imgui.NullText()
+                        imgui.SameLine()
+                        if imgui.Button(u8'Активация/Деактивация##51', actflood) then
+                            prospam()
+                        end
+                    end
+                    
+                    imgui.TextQuestion(u8'Флудер о наборе. Пишет ваш текст каждые N-ое кол-во секунд которые вы поставили. Если не хотите что-бы он отправлялся куда-то, оставьте поле пустым')
+                    imgui.SameLine()
+                    imgui.Checkbox(u8'Флудер набора', nabor)
+                    if nabor.v then                       
+                        imgui.NullText()
+                        imgui.SameLine()
+                        imgui.InputText(u8'Отправка в /vr', nabortext1)     
+                        imgui.SameLine()
+                        imadd.ToggleButton(u8'##415161', vipnabor)                                         
+                        imgui.SameLine()    
+                        imgui.Text(u8'/vra')
+                        imgui.NullText()
+                        imgui.SameLine()
+                        imgui.InputText(u8'Отправка в /fam', nabortext2)                        
+                        imgui.NullText()
+                        imgui.SameLine()
+                        imgui.InputText(u8'Отправка в /ad', nabortext3) 
+                        imgui.NullText()
+                        imgui.SameLine()
+                        radiostation()
+                        imgui.NullText()
+                        imgui.SameLine()
+                        imgui.SliderInt(u8"КД отправки", nabint, 1, 300, 1.0)
+                        imgui.SameLine()
+                        imgui.TextQuestion(u8'Ставьте не менее 60, что-бы не получить мут от бота. Значения устанавливаются в секундах!')
+                        imgui.NullText()
+                        imgui.SameLine()
+                        if imgui.Button(u8'Активация/Деактивация', actnabor) then
+                            naborspam()
+                        end                   
+                    end
+                    imgui.TextQuestion(u8'Флудер семьи. /fspam - активация. Пишет ваш текст в чат семьи. Устанавливайте кд в СЕКУНДАХ')
+                    imgui.SameLine()
+                    imgui.Checkbox(u8'Флудер семьи.', famflood)
+                    if famflood.v then
+                        
+                        
+                        imgui.TextQuestion(u8'КД между вашими сообщениями в секундах')
+                        imgui.SameLine()
+                        imgui.SliderInt(u8"КД между срабатыванием", famint, 1, 180, 1.0)
+                        imgui.NullText()
+                        imgui.SameLine()
+                        imgui.InputText(u8'Пишет данный текст в чат вашей фамы', famtext3)
+                        imgui.NullText()
+                        imgui.SameLine()
+                        if imgui.Button(u8'Активация/Деактивация##8515', actfam) then
+                            famchatflooder()
+                        end
+                    end
+                    
+                    imgui.TextQuestion(u8'Автоматизирует работу со складом')
+                    imgui.SameLine()
+                    imgui.Checkbox(u8'Автоматизация склада', skladsocr)
+                    if skladsocr.v then
+                        imgui.NullText()
+                        imgui.SameLine()
+                        imgui.Text(u8'На цифру 1 открывает/закрывает склад')
+                        imgui.NullText()
+                        imgui.SameLine()
+                        imgui.Text(u8'На цифру 2 спавнит кары')
+                        imgui.NullText()
+                        imgui.SameLine()
+                        imgui.Text(u8'На цифру 3 заправляет кары')
+                    end
+                    imgui.PushItemWidth(85.5)
+                    imgui.TextQuestion(u8'Автоматически будет отправлять инвайт в семью. Активация: ПКМ + X')
+                    imgui.SameLine()
+                    imgui.Checkbox(u8'Быстрый инвайт в семью', faminvite)
+                    if faminvite.v then
+                        imgui.NullText()
+                        imgui.SameLine()
+                    end
+
+                    
+                    
+                    
+            end
+            if button[3] then
+                imgui.TextQuestion(u8'Автоматически будет брать вам оружие со склада. Выбирайте что-то одно за один раз для корректной работы.')
+                imgui.SameLine()
+                imgui.Checkbox(u8'Автовзятие оружия со склада', autosklad)
+                if autosklad.v then
+                    imgui.NullText()
+                    imgui.SameLine()
+                    imgui.TextQuestion(u8'Берет Deagle со склада моментально')
+                    imgui.SameLine()
+                    imadd.ToggleButton(u8"##1", deaglesklad)
+                
+                    imgui.SameLine()
+                    imgui.Text(u8"Брать Deagle")
+                    imgui.NullText()
+                    imgui.SameLine()
+                    imgui.TextQuestion(u8'Берет M4 со склада моментально')
+                    imgui.SameLine()
+                    imadd.ToggleButton(u8'##2', m4sklad)
+                    
+                    imgui.SameLine()
+                    imgui.Text(u8"Брать M4")
+                    imgui.NullText()
+                    imgui.SameLine()
+                    imgui.TextQuestion(u8'Берет Rifle со склада моментально')
+                    imgui.SameLine()
+                    imadd.ToggleButton(u8"##3", riflesklad)
+                    
+                    imgui.SameLine()
+                    imgui.Text(u8"Брать Rifle")
+                    imgui.NullText()
+                    imgui.SameLine()
+                    imgui.TextQuestion(u8'Берет Shotgun со склада моментально')
+                    imgui.SameLine()
+                    imadd.ToggleButton(u8'##4', shotgunsklad)
+                    
+                    imgui.SameLine()
+                    imgui.Text(u8"Брать ShotGun")
+                end
+                
+            
+                
+                    
+            
+                imgui.NullText()
+                imgui.SameLine()
+                imgui.Checkbox(u8'- Автоввод пароля в банке ', bankparol)
+                if bankparol.v then  
+                    imgui.NullText()
+                    imgui.SameLine()  
+                    imgui.InputText(u8'Введите сюда ваш пароль', parolbank) 
+                                                                                                                                        
+                end
+                imgui.TextQuestion(u8'При включении активирует карту закладок(не работает на лаунчере)')
+                imgui.SameLine()
+                if imgui.Button(u8'Карта закладок', karta) then
+                    drmap()
+                end
+                imgui.SameLine()
+                imgui.Text(u8'Включает или выключает карту закладок')
+                imgui.TextQuestion(u8'Используйте на свой страх и риск! Пробивает все кроме таба, консоли и обвесов')
+                imgui.SameLine()
+                imgui.Text(u8'/probiv - Автопробив')
+                imgui.NullText()
+                imgui.SameLine()
+                imgui.Text(u8'/vr - Обычная отправка сообщения [В ВипЧат]')
+                imgui.NullText()
+                imgui.SameLine()
+                imgui.Text(u8'/vra - Рекламная отправка сообщения [В ВипЧат]')
+               
+            end
+            if button[4] then
+                imadd.ToggleButton(u8'#4414818', bind1)
+                        imgui.SameLine()
+                        imgui.Text(u8'ALT + 1 = Использовать нарко и сбить его')
+                        imgui.PushItemWidth(120)
+                        imgui.InputText(u8'Текст после использования нарко', sbivtext) 
+                        
+                        --------------------------
+                        
+                        imadd.ToggleButton(u8'#445154818', bind2)
+                
+                        imgui.SameLine()
+                        imgui.Text(u8'ALT + 2 = Использовать наркотики')
+            
+                        
+                        
+                        ----------------------
+                        imadd.ToggleButton(u8'#48788', bind3)
+            
+                        imgui.SameLine()
+                        imgui.Text(u8'ALT + 3 = Использовать броник')
+            
+                        
+                    ---------------------------
+                        imadd.ToggleButton(u8'#44144215818', bind4)
+                    
+                        imgui.SameLine()
+                        imgui.Text(u8'ALT + 4 = Использовать маску')
+                    
+                        
+                        ----------------------
+                        
+                        imadd.ToggleButton(u8'#48648168', bind5)
+                        imgui.SameLine()
+                        imgui.PushItemWidth(80)
+                        imgui.SameLine()
+                        imgui.Text(u8'ALT + 5 = Зарядить')
+                        imgui.SameLine()
+                        imgui.InputInt(u8'####23131', deaglepatrons)
+                        imgui.SameLine()
+                        imgui.Text(u8'Дигла')
+        
+                        
+                        ----------------------------
+                        imadd.ToggleButton(u8'#4221', bind6)
+                    
+                        imgui.SameLine()
+                        imgui.Text(u8'ALT + 6 = Зарядить')
+                        imgui.SameLine()
+                        imgui.InputInt(u8'##50715015', m4patrons)
+                        imgui.SameLine()
+                        imgui.Text(u8'M4')
+                        
+                        -----------------------
+                        imadd.ToggleButton(u8'#49818', bind7)
+                        imgui.SameLine()
+                    
+                        imgui.Text(u8'ALT + 0 = Поставить /point')
+                        -------------------------
+                        imadd.ToggleButton(u8'#4551545154818', bind10)
+                    
+                        imgui.SameLine()
+                        imgui.Text(u8'ALT + Q = /anim 9 (На лаунчере не работает)')
+                        
+                        ---------------------
+                        imadd.ToggleButton(u8'##87575', car1)
+                        imgui.SameLine()
+                        imgui.Text(u8'0 = Заспавнить все свои кары')
+                        --------------------
+                        imadd.ToggleButton(u8'#486818', bind8)
+                        imgui.SameLine()
+                        
+                        imgui.Text(u8'L = Открыть/Закрыть Т/С')
+                        
+                        ---------------------
+                        imadd.ToggleButton(u8'#87818', bind9)
+                        imgui.SameLine()
+                    
+                        imgui.Text(u8'R = Показать распальцовку')
+
+            end
+            if button[5] then
+                imgui.CenterTextColoredRGB('{00FA9A}Правила NRP каптов')
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{FFFFFF}NRP Банды:')
+                
+                imgui.CenterTextColoredRGB('{FFFFFF}[{1E90FF}The Rifa {FFFFFF}& {696969}Night Wolves {FFFFFF}& {FFFF00}Los Santos Vagos {FFFFFF} & {800080}Ballas {FFFFFF}]')
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{006400}Разрешено')
+                imgui.NullText()
+                imgui.Text(u8'Разрешено использовать оружия: Desert Eagle, Shotgun, M4, Country Rifle.')
+                imgui.Text(u8'Разрешено использовать кулаки и оружие ближнего боя.')
+                imgui.Text(u8'Разрешено бег на колесико мыши/быстрое нажатие пробела(SprintHoоk)')
+                imgui.Text(u8'Разрешено убирать кусты а так же листву с деревьев(Не задевая саму текстуру дерева) для повышения FPS')
+                imgui.Text(u8'Разрешено использовать UGENRL без звуков противника')
+                imgui.Text(u8'Разрешено использовать: наркотики (/usedrugs), напитки(/sprunk), аптечку(/usemed),сигареты(/smoke) - когда вы не в бою')
+                imgui.Text(u8'Разрешен поиск членов вражеской банды по территории гетто с 13:00 минуты капта')
+                imgui.Text(u8'Разрешен RevengeKill (RK)')
+                imgui.Text(u8'Разрешено ПГ (бить человека кулаком, если тот держит оружие в руках)')
+                imgui.Text(u8'Разрешено увольнять на капте 1-5 ранг')
+                imgui.Text(u8'Разрешено убивать человека на капте,если он создаёт помеху')
+                imgui.Text(u8'Разрешено стрелять из мясовозки')
+                imgui.TextColoredRGB('{FFFFFF}Разрешены крыши с одного прыжка | если выше {FF0000}jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Разрешено отвечать на провокацию на СК | если провокации нет {FF0000}jail 300')
+                imgui.Text(u8'Разрешено убивать вражескую банду в Зелёных зонах если капт идёт в этом квадрате(Спавн новичков. ЖД/ЛС. Людные места)')
+                imgui.Text(u8'Разрешено иметь неограниченное кол-во 8 рангов')
+                imgui.Text(u8'Разрешено каптить притон')
+                imgui.Text(u8'Разрешен сбив хила')
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{FF0000}Запрещено')
+                imgui.NullText()
+                imgui.TextColoredRGB('{FFFFFF}Запрещено использовать любого оружия, которого нет в списке разрешеного |{FF0000} jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено использовать бронежилеты и маски (/armour) (/mask). |{FF0000} jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено использовать любой вид пополнения здоровья в бою. |{FF0000} jail 300')
+                imgui.TextColoredRGB('{FFFFFF}Запрещен пинг выше 180. |{FF0000} Kick, далее jail 10')
+                imgui.TextColoredRGB('{FFFFFF}Запрещена квадратная карта. |{FF0000} 10 дней BAN')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено выходить за пределы гетто во время капта. |{FF0000} jail 120 {FFFFFF}(Исключение: если игрок до капта был вне гетто')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено убивать в интерьерах. |{FF0000} warn')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено каптить обрезом. |{FF0000} + строгий {FFFFFF} лидеру, при выигрыше забившей банды территория возвращается {00FF00}обратно')
+                imgui.TextColoredRGB('{FFFFFF}Запрещен перенос капта больше 5-и минут без весомой причины |{DAA520} устник {FFFFFF} лидеру')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено использовать эффекты убирающие трассеры от пуль(ваши и других игроков)/кровь(от вас/противника). |{FF0000} BAN 30 дней')
+                imgui.TextColoredRGB('{FFFFFF}Запрещен побег на респу во время перестрелки |{FF0000} jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Запрещена провокация на СК |{FF0000} jail 300')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено заходить в интерьер аммуниции |{FF0000} jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено использовать улучшения для оружий (ЦЕВЬЁ, приклад, компенсатор) |{FF0000} jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено исп. активные акссесуары (скейт,катана,бита и т.д) |{FF0000} jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено оффаться во время боя |{FF0000} jail 300/warn')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено инвайтить во время капта |{FF0000} строгий {FFFFFF}лидеру')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено требовать оффнуться игроков из игры и не РКшиться | Если от лидера либо 9-ки - {DAA520} устный {FFFFFF} лидеру.')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено СКшить во время капта |{FF0000} jail 300')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено использовать пиво во время капта ( /beer ) |{FF0000} jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Находиться, пробегать, стоять на СК зоне противников.|{FF0000} jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Находиться/забираться на крышу, которая требует более одного прыжка с земли. |{FF0000} jail 120')
+                imgui.NullText()
+
+            end
+            if button[6] then
+                imgui.CenterTextColoredRGB('{00FA9A}Правила RP каптов')
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{FFFFFF} РП Банды')
+                imgui.CenterTextColoredRGB('{FFFFFF}[{008000}Grove {FFFFFF}& {00FFFF}Aztec{FFFFFF}]')
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{006400}Разрешено')
+                imgui.NullText()
+                imgui.Text(u8'Разрешено использовать оружия: Desert Eagle, Shotgun, M4, Country Rifle.')
+                imgui.Text(u8'Разрешено использовать кулаки и оружие ближнего боя.')
+                imgui.Text(u8'Разрешено бег на колесико мыши/быстрое нажатие пробела(SprintHoоk)')
+                imgui.Text(u8'Разрешено убирать кусты а так же листву с деревьев(Не задевая саму текстуру дерева) для повышения FPS')
+                imgui.Text(u8'Разрешено использовать UGENRL без звуков противника')
+                imgui.Text(u8'Разрешено использовать: наркотики (/usedrugs), напитки(/beer /sprunk), аптечку(/usemed),сигареты(/smoke) - когда вы не в бою')
+                imgui.Text(u8'Разрешен поиск членов вражеской банды по территории гетто с 13:00 минуты капта')
+                imgui.Text(u8'Разрешен RevengeKill (RK)')
+                imgui.Text(u8'Разрешено ПГ (бить человека кулаком, если тот держит оружие в руках)')
+                imgui.Text(u8'Разрешено увольнять на капте 1-5 ранг')
+                imgui.Text(u8'Разрешено убивать человека на капте,если он создаёт помеху')
+                imgui.Text(u8'Разрешено стрелять из мясовозки')
+                imgui.TextColoredRGB('{FFFFFF}Разрешены крыши с одного прыжка | если выше {FF0000} jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Разрешено отвечать на провокацию на СК | если провокации нет {FF0000}jail 300')
+                imgui.Text(u8'Разрешено убивать вражескую банду в Зелёных зонах если капт идёт в этом квадрате(Спавн новичков. ЖД/ЛС. Людные места)')
+                imgui.Text(u8'Разрешено иметь неограниченное кол-во 8 рангов')
+                imgui.Text(u8'Разрешено каптить притон')
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{FF0000}Запрещено')
+                imgui.NullText()
+                imgui.TextColoredRGB('{FFFFFF}Запрещено использовать любого оружия, которого нет в списке разрешеного |{FF0000} jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено использовать бронежилеты и маски (/armour) (/mask). |{FF0000} jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено использовать любой вид пополнения здоровья в бою. |{FF0000} jail 300/warn')
+                imgui.TextColoredRGB('{FFFFFF}Запрещен пинг выше 180. |{FF0000}Kick, далее  jail 10')
+                imgui.TextColoredRGB('{FFFFFF}Запрещена квадратная карта. |{FF0000} 10 дней BAN')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено выходить за пределы гетто во время капта. |{FF0000} jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено убивать в интерьерах. |{FF0000} warn')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено каптить обрезом. |{FF0000} + строгий {FFFFFF} лидеру, при выигрыше забившей банды территория возвращается {00FF00}обратно')
+                imgui.TextColoredRGB('{FFFFFF}Запрещен перенос капта больше 5-и минут без весомой причины |{DAA520} устник {FFFFFF} лидеру')
+                imgui.TextColoredRGB('{FFFFFF}Запрещены баги стрельбы (+с,слайды) Исключение : перекаты, отвод после 2.')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено использовать эффекты убирающие трассеры от пуль(ваши и других игроков)/кровь(от вас/противника). | {FF0000}BAN 30 дней')
+                imgui.TextColoredRGB('{FFFFFF}Запрещен побег на респу во время перестрелки | {FF0000}jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Запрещена провокация на СК |{FF0000} jail 300')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено заходить в интерьер аммуниции |{FF0000} jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено использовать улучшения для оружий (ЦЕВЬЁ, приклад, компенсатор) |{FF0000} jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено исп. активные акссесуары (скейт,катана,бита и т.д) |{FF0000} jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено оффаться во время боя |{FF0000} jail 300/warn')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено инвайтить во время капта |{FF0000} строгий {FFFFFF}лидеру')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено требовать оффнуться игроков из игры и не РКшиться | Если от лидера либо 9-ки - {DAA520}устный {FFFFFF}лидеру.')
+                imgui.TextColoredRGB('{FFFFFF}Сбив анимации хила на РП капте запрещено | {FF0000}jail 180')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено СКшить во время капта |{FF0000} jail 300')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено использовать пиво во время капта ( /beer ) |{FF0000} jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Находиться, пробегать, стоять на СК зоне противников.| {FF0000}jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Находиться/забираться на крышу, которая требует более одного прыжка с земли. |{FF0000} jail 120')
+
+            end
+            if button[7] then
+                imgui.CenterTextColoredRGB('{00FA9A}Правила Порта')
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{00FA9A}Основные правила')
+                imgui.NullText()
+                imgui.TextColoredRGB('{FFFFFF}Захват контейнеров разрешено посещать с 5-го ранга в уличной группировке.')
+                imgui.TextColoredRGB('{FFFFFF}Захват длится 10 минут.')
+                imgui.TextColoredRGB('{FFFFFF}Каждый участник захвата должен в {00FF00}обязательном {FFFFFF}порядке записывать на видео')
+                imgui.TextColoredRGB('{FFFFFF}На захвате ваш скин должен соответствовать вашей организации | не соответствие скина {FF0000}/warn')
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{006400}Разрешено')
+                imgui.NullText()
+                imgui.TextColoredRGB('{FFFFFF}Использовать оружие: Deagle, Shotgun, Mp5, M4, Ak-47 ,Rifle.')
+                imgui.TextColoredRGB('{FFFFFF}Использование бронежилета/аптечек/наркотики.')
+                imgui.TextColoredRGB('{FFFFFF}Использовать т/с.')
+                imgui.TextColoredRGB('{FFFFFF}PowerGaming.')
+                imgui.TextColoredRGB('{FFFFFF}Бег на колёсико или же SprintHook.')
+                imgui.TextColoredRGB('{FFFFFF}Использовать обвесы на оружие.')
+                imgui.TextColoredRGB('{FFFFFF}Использовать улучшенные аксессуары ( искл. пункт 10 из запрещенного.)')
+                imgui.TextColoredRGB('{FFFFFF}Использовать маску')
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{FF0000}Запрещено')
+                imgui.NullText()
+                imgui.TextColoredRGB('{FFFFFF}Нарушать правила сервера. |{FF0000} В зависимости от нарушения')
+                imgui.TextColoredRGB('{FFFFFF}Нахождение посторонних лиц на захвате ящика. |{FF0000}спавн/jail 60')
+                imgui.TextColoredRGB('{FFFFFF}Сбивать анимации и использовать баги стрельбы. |{FF0000} jail 120-300/warn')
+                imgui.TextColoredRGB('{FFFFFF}Использование хила/бронежилета в бою. | {FF0000}jail 120/warn')
+                imgui.TextColoredRGB('{FFFFFF}Иметь постоянный пинг 180+. |{FF0000} jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Использовать бомбу. |{FF0000} ban 5 дней')
+                imgui.TextColoredRGB('{FFFFFF}Иметь более 9999 патрон любого оружия. |{FF0000} ban 30 дней')
+                imgui.TextColoredRGB('{FFFFFF}Мешать приезду другой банды. |{FF0000} jail 120/warn')
+                imgui.TextColoredRGB('{FFFFFF}Использовать активные аксессуар, аксессуары, которые дают пассивный хилл. | {FF0000}jail 120-600/warn')
+                imgui.TextColoredRGB('{FFFFFF}Изменять стиль походки. |{FF0000} ban 5 дней')
+                imgui.TextColoredRGB('{FFFFFF}Использовать /adrenaline. |{FF0000} jail 120/warn')
+                imgui.TextColoredRGB('{FFFFFF}Использовать "Камень пространства" и "Камень неуязвимости". |{FF0000}ban 5 дней')
+                imgui.TextColoredRGB('{FFFFFF}РК после спавна ящиков. До появления можно. |{FF0000} jail 60-120')
+                imgui.TextColoredRGB('{FFFFFF}Прилетать на воздушном т/с. | {FF0000}jail 60-120')
+                imgui.TextColoredRGB('{FFFFFF}Стрелять с пассажирского места. | {FF0000}jail 120-300/warn')
+                imgui.TextColoredRGB('{FFFFFF}Использовать костюм попугая и прочие скины/модификации, которые закрывают скин. |{FF0000} jail 120-600/warn')
+                imgui.TextColoredRGB('{FFFFFF}Покупать форму военного через черный рынок. |{FF0000} warn')
+                imgui.TextColoredRGB('{FFFFFF}Приезжать раньше ХХ:00. | {FF0000}jail 60-120')
+                imgui.TextColoredRGB('{FFFFFF}Пересекать линию зоны порта,до момента начала [15:00 | 20:00]. | {FF0000}jail 60-120')
+                imgui.TextColoredRGB('{FFFFFF}Использовать запрещённое оружие. |{FF0000} jail 120-600/warn')
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{45e9f5be} Зона Порта')
+                imgui.NullText()
+                skport()
+                imgui.NullText()
+            end
+            if button[8] then
+                imgui.CenterTextColoredRGB('{00FA9A}Правила Аирдропа')
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{006400}Разрешено')
+                imgui.NullText()
+                imgui.Text(u8'Использовать: deagle, Shotgun, Mp5, M4, Ak47, Rifle, Sniper Rifle')
+                imgui.Text(u8'Использование бронежилета/аптечек/наркотики.')
+                imgui.Text(u8'Power Gaming.')
+                imgui.Text(u8'Revenge Kill.')
+                imgui.Text(u8'Отвод после двух выстрелов.')
+                imgui.Text(u8'Сбив темпа стрельбы.')
+                imgui.Text(u8'Использовать все виды Т/С, кроме Т/С с нелегального рынка и воздушных Т/С.')
+                imgui.Text(u8'Использовать обвесы.')
+                imgui.Text(u8'Использовать маски.')
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{FF0000}Запрещено')
+                imgui.NullText()
+                imgui.TextColoredRGB('{FFFFFF}Нарушать правила сервера. |{FF0000}  В зависимости от нарушения')
+                imgui.TextColoredRGB('{FFFFFF}Присутствие посторонних лиц. | {FF0000} спавн/jail 60')
+                imgui.TextColoredRGB('{FFFFFF}Любые баги стрельбы. За исключением отвода после второго и сбива темпа. | {FF0000} jail 120-300/warn')
+                imgui.TextColoredRGB('{FFFFFF}Сбив анимации. |{FF0000}  jail 120-300/warn')
+                imgui.TextColoredRGB('{FFFFFF}Приезжать на захват с постоянным пингом выше 180. |{FF0000}  jail 120')
+                imgui.TextColoredRGB('{FFFFFF}Использовать заточки. |{FF0000}  jail 120-600/warn')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено иметь более 9999 патронов любого оружия. | {FF0000} ban 30 дней')
+                imgui.TextColoredRGB('{FFFFFF}Использовать бомбу. | {FF0000} ban 5 дней')
+                imgui.TextColoredRGB('{FFFFFF}Ставить трейлеры на место падения Aирдропа. |{FF0000}  Спавн трейлера')
+                imgui.TextColoredRGB('{FFFFFF}Использовать активные аксессуар и аксессуары, которые дают пассивный хилл. | {FF0000} jail 120-600/warn')
+                imgui.TextColoredRGB('{FFFFFF}Мешать приезду другой банды или мафии. |{FF0000}  jail 120/warn')
+                imgui.TextColoredRGB('{FFFFFF}Стрельба с пассажирского сиденья, а так же с водительского. |{FF0000}  jail 120-300/warn')
+                imgui.TextColoredRGB('{FFFFFF}Использовать костюм попугая, модификации во весь скин и модификации с эффектами. | {FF0000} jail 120-600/warn')
+                imgui.TextColoredRGB('{FFFFFF}Ставить /setspawn на месте аирдропа. |{FF0000}  jail 60')
+                imgui.TextColoredRGB('{FFFFFF}Приезжать игрокам 1-4 ранга для банд и 1-3 для мафий. | {FF0000} jail 60')
+                imgui.TextColoredRGB('{FFFFFF}Использовать камень неуязвимости и камень пространства. |{FF0000}  ban 5 дней')
+                imgui.TextColoredRGB('{FFFFFF}Использовать таблетку андреналин (/adrenaline). |{FF0000}  jail 120/warn')
+                imgui.TextColoredRGB('{FFFFFF}Вести перестрелку с видом от первого лица в лаунчере. |{FF0000}  ban 30 дней')
+                imgui.TextColoredRGB('{FFFFFF}Использовать бронежилет или хилл в бою. | {FF0000} jail 120-300/warn')
+                imgui.TextColoredRGB('{FFFFFF}Использовать UZI. |{FF0000}  jail 120')
+            end
+            if button[9] then
+                imgui.CenterTextColoredRGB('{00FA9A}СК Зоны RP Банд')
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{008000}Grove')
+                imgui.NullText()
+                imgui.Image(image, imgui.ImVec2(800, 400))
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{00FFFF}Aztec')
+                imgui.NullText()
+                imgui.Image(image1, imgui.ImVec2(800, 400))    
+                imgui.NullText()
+                  
+            end
+            if button[10] then
+                imgui.CenterTextColoredRGB('{00FA9A}СК Зоны NRP Банд')
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{696969}Night Wolves')
+                imgui.NullText()
+                imagenw1()
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{1E90FF}The Rifa')
+                imgui.NullText()
+                imagerifa1()
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{800080}Ballas')
+                imgui.NullText()
+                imageballas1()
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{FFFF00}Los Santos Vagos')
+                imgui.NullText()
+                imagevagos1()
+            end
+            if button[11] then
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{00FA9A}Правила поведение на наркопритонах')
+                imgui.NullText()
+                imgui.Text(u8'На притоне могут находится любые желающие.')
+                imgui.Text(u8'Разрешается РК и ПГ на притонах.')
+                imgui.Text(u8'Каждая банда обязана обеспечивать свой притон работой.')
+                imgui.Text(u8'Разрешается сбив темпа стрельбы на наркопритонах.')
+                imgui.TextColoredRGB('{FFFFFF}Запрещены любые баги стрельбы. ( Иcключение: Отводы и Сбив темпа) | {FF0000}jail 120-300/warn')
+                imgui.TextColoredRGB('{FFFFFF}Запрещены улучшенные аксессуары/скины на наркопритонах. |{FF0000} jail 120-600/warn')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено ставить /setspawn на территориях наркопритонов. | {FF0000}jail 60')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено убивать в интерьерах наркопритонов. |{FF0000} jail 120/warn')
+                imgui.TextColoredRGB('{FFFFFF}Садить наркотики можно в любое время, в любой день.')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено в бою заходить в интерьер притона. |{FF0000} jail 120/warn')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено парковать личный т/с на территориях наркопритонов. |{FF0000} Отправка т/с на штрафстоянку')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено использовать камень неуязвимости и камень пространства. |{FF0000} ban 5 дней')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено использовать Uzi/Tec 9/Sniper Rifle/Knife. |{FF0000} jail 600/warn')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено использовать скины не своей фракции при захвате/обороне притона. | {FF0000}jail 60-120/warn')
+                imgui.TextColoredRGB('{FFFFFF}В притоне в обязательном порядке должно находиться не менее 100 наркотиков и 100.000$ постоянно.')
+                imgui.TextColoredRGB('{FFFFFF}Запрещено использовать сет "ФБР Экипировки"/"Полицейской Экипировки" | {FF0000}jail 300-600/warn')
+                imgui.TextColoredRGB('{FFFFFF}Запрещены любые модификации на притоне |{FF0000} jail 120-300')
+                imgui.NullText()
+                imgui.CenterTextColoredRGB('{00FA9A}Зоны наркопритонов')
+                imgui.NullText()
+                pritons1()
+                imgui.NullText()
+                pritons2()
+                imgui.NullText()
+                pritons3()
+                imgui.NullText()
+                pritons4()
+                imgui.NullText()
+                pritons5()
+                imgui.NullText()
+                pritons6()
+                imgui.NullText()
+                pritons7()
+                imgui.NullText()
+                pritons8()
+                imgui.NullText()
+                
+            end
+
+           
+           
+                imgui.EndChild()
+     
+                imgui.BeginChild("##5", imgui.ImVec2(1015, 70), true)
+                if imgui.Button(u8"Сохранить настройки", imgui.ImVec2(321, 45)) then save() save2() end
+                imgui.SameLine()
+                if imgui.Button(u8'Перезагрузить скрипт',imgui.ImVec2(321,45)) then
+                    lua_thread.create(function ()
+                        wait(100)
+                        sampAddChatMessage(tag..'Скрипт перезагружается..', -1)
+                        thisScript():reload()
+                    end)
+                end
+                imgui.SameLine()
+                if imgui.Button(u8'Закрыть',imgui.ImVec2(321,45)) then
+                    window.v = false
+                end
+                imgui.EndChild()
+                
+
+            imgui.End()
+          
+    
+end
+
+function imgui.TextQuestion(text)
+    imgui.TextDisabled('(?)')
+    if imgui.IsItemHovered() then
+        imgui.BeginTooltip()
+        imgui.PushTextWrapPos(450)
+        imgui.TextUnformatted(text)
+        imgui.PopTextWrapPos()
+        imgui.EndTooltip()
+    end
+end
+
+function imgui.NullText(text)
+    imgui.TextDisabled('    ')
+    end
+
+function switch(key)
+    return function(tab)
+        local current = tab[key] or tab['default']
+        if type(current) == 'function' then current() end
+    end
+end
+
+w, h = getScreenResolution()
+imgui.Process = false
+
+function apply_style()
+    imgui.SwitchContext()
+    local style = imgui.GetStyle()
+    local colors = style.Colors
+    local clr = imgui.Col
+    local ImVec4 = imgui.ImVec4
+    local ImVec2 = imgui.ImVec2
+ 
+     style.WindowPadding = ImVec2(15, 15)
+     style.WindowRounding = 15.0
+     style.FramePadding = ImVec2(5, 5)
+     style.ItemSpacing = ImVec2(12, 8)
+     style.ItemInnerSpacing = ImVec2(8, 6)
+     style.IndentSpacing = 25.0
+     style.ScrollbarSize = 15.0
+     style.ScrollbarRounding = 15.0
+     style.GrabMinSize = 15.0
+     style.GrabRounding = 7.0
+     style.ChildWindowRounding = 8.0
+     style.FrameRounding = 6.0
+   
+ 
+       colors[clr.Text] = ImVec4(0.95, 0.96, 0.98, 1.00)
+       colors[clr.TextDisabled] = ImVec4(0.36, 0.42, 0.47, 1.00)
+       colors[clr.WindowBg] = ImVec4(0.11, 0.15, 0.17, 1.00)
+       colors[clr.ChildWindowBg] = ImVec4(0.15, 0.18, 0.22, 1.00)
+       colors[clr.PopupBg] = ImVec4(0.08, 0.08, 0.08, 0.94)
+       colors[clr.Border] = ImVec4(0.43, 0.43, 0.50, 0.50)
+       colors[clr.BorderShadow] = ImVec4(0.00, 0.00, 0.00, 0.00)
+       colors[clr.FrameBg] = ImVec4(0.20, 0.25, 0.29, 1.00)
+       colors[clr.FrameBgHovered] = ImVec4(0.12, 0.20, 0.28, 1.00)
+       colors[clr.FrameBgActive] = ImVec4(0.09, 0.12, 0.14, 1.00)
+       colors[clr.TitleBg] = ImVec4(0.09, 0.12, 0.14, 0.65)
+       colors[clr.TitleBgCollapsed] = ImVec4(0.00, 0.00, 0.00, 0.51)
+       colors[clr.TitleBgActive] = ImVec4(0.08, 0.10, 0.12, 1.00)
+       colors[clr.MenuBarBg] = ImVec4(0.15, 0.18, 0.22, 1.00)
+       colors[clr.ScrollbarBg] = ImVec4(0.02, 0.02, 0.02, 0.39)
+       colors[clr.ScrollbarGrab] = ImVec4(0.20, 0.25, 0.29, 1.00)
+       colors[clr.ScrollbarGrabHovered] = ImVec4(0.18, 0.22, 0.25, 1.00)
+       colors[clr.ScrollbarGrabActive] = ImVec4(0.09, 0.21, 0.31, 1.00)
+       colors[clr.ComboBg] = ImVec4(0.20, 0.25, 0.29, 1.00)
+       colors[clr.CheckMark] = ImVec4(0.28, 0.56, 1.00, 1.00)
+       colors[clr.SliderGrab] = ImVec4(0.28, 0.56, 1.00, 1.00)
+       colors[clr.SliderGrabActive] = ImVec4(0.37, 0.61, 1.00, 1.00)
+       colors[clr.Button] = ImVec4(0.20, 0.25, 0.29, 1.00)
+       colors[clr.ButtonHovered] = ImVec4(0.28, 0.56, 1.00, 1.00)
+       colors[clr.ButtonActive] = ImVec4(0.06, 0.53, 0.98, 1.00)
+       colors[clr.Header] = ImVec4(0.20, 0.25, 0.29, 0.55)
+       colors[clr.HeaderHovered] = ImVec4(0.26, 0.59, 0.98, 0.80)
+       colors[clr.HeaderActive] = ImVec4(0.26, 0.59, 0.98, 1.00)
+       colors[clr.ResizeGrip] = ImVec4(0.26, 0.59, 0.98, 0.25)
+       colors[clr.ResizeGripHovered] = ImVec4(0.26, 0.59, 0.98, 0.67)
+       colors[clr.ResizeGripActive] = ImVec4(0.06, 0.05, 0.07, 1.00)
+       colors[clr.CloseButton] = ImVec4(0.40, 0.39, 0.38, 0.16)
+       colors[clr.CloseButtonHovered] = ImVec4(0.40, 0.39, 0.38, 0.39)
+       colors[clr.CloseButtonActive] = ImVec4(0.40, 0.39, 0.38, 1.00)
+       colors[clr.PlotLines] = ImVec4(0.61, 0.61, 0.61, 1.00)
+       colors[clr.PlotLinesHovered] = ImVec4(1.00, 0.43, 0.35, 1.00)
+       colors[clr.PlotHistogram] = ImVec4(0.90, 0.70, 0.00, 1.00)
+       colors[clr.PlotHistogramHovered] = ImVec4(1.00, 0.60, 0.00, 1.00)
+       colors[clr.TextSelectedBg] = ImVec4(0.25, 1.00, 0.00, 0.43)
+       colors[clr.ModalWindowDarkening] = ImVec4(1.00, 0.98, 0.95, 0.73)
+end
+
+apply_style()
+
+function getguninvent(gunname, ammo)
+    if ammo:len() > 0 and tonumber(ammo) > 0 then
+      gname, ammoclip, findedgun = gunname, ammo, false
+        sampSendChat('/invent')
+    else
+        sampAddChatMessage(tag..'{7FFFD4}[FastGun] Введите кол-во патрон! ', -1)
+    
+  end
+  
+  function sampev.onShowTextDraw(id,data)
+  if gname ~= 'nothing' then
+    if not findedgun  then
+      if data.modelId == tableguns[gname] then
+        findedgun = true
+        sampSendClickTextdraw(id)
+      end
+    else
+      if id == 2302 then
+        sampSendClickTextdraw(id)
+      end
+    end
+  end
+  end
+  
+  function sampev.onShowDialog(dialogId, dialogStyle, dialogTitle, okButtonText, cancelButtonText, dialogText)
+  if findedgun and gname ~= 'nothing' and dialogId == 3011 then
+    sampSendDialogResponse(3011,1,0,ammoclip)
+    sampSendClickTextdraw(2110)
+    sampSendClickTextdraw(2111)
+    gname = 'nothing'
+    return false
+    end
+ end
+end
+function cmd_probiv(id)
+    lua_thread.create(function()
+    _, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
+    wait(2000)
+    sampSendChat("/time")
+    wait(500)
+    sampSendChat("/id "..id.."")
+    wait(600)
+    setVirtualKeyDown(VK_TAB, false) -- пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ
+    wait(1000)
+    setVirtualKeyDown(VK_TAB, false) -- пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ
+    wait(500)
+    setVirtualKeyDown(116, true) -- F5 пїЅпїЅпїЅпїЅпїЅ
+    wait(3100)
+    setVirtualKeyDown(116, false) -- F5 пїЅпїЅпїЅпїЅпїЅ
+    wait(600)
+    sampSendChat("/skill")
+    wait(600)
+    sampSendChat("/stats")
+    wait(600)
+    sampSendChat("/donate")
+    wait(600)
+    setVirtualKeyDown(27, true) -- пїЅпїЅпїЅ
+    wait(10)
+    setVirtualKeyDown(27, false) -- пїЅпїЅпїЅ
+    wait(500)
+    sampSendChat("/invent")
+    wait(1500)
+    sampSendClickTextdraw(2071) -- textdraw пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+    end)
+end
+function _con()
+    local huy = callFunction(0x53C500, 2, 2, true, true)
+    local huy1 = callFunction(0x53C810, 1, 1, true)
+    local huy2 = callFunction(0x40CF80, 0, 0)
+    local huy3 = callFunction(0x4090A0, 0, 0)
+    local huy4 = callFunction(0x5A18B0, 0, 0)
+    local huy5 = callFunction(0x707770, 0, 0)
+    local pX, pY, pZ = getCharCoordinates(PLAYER_PED)
+    requestCollision(pX, pY)
+    loadScene(pX, pY, pZ)
+    sampAddChatMessage(tag.."[Cleaner]  {d5dedd}Очистка буффера произошла успешно!", 0x01A0E9)
+end
+function isKeyCheckAvailable()
+	if not isSampLoaded() then
+		return true
+	end
+	if not isSampfuncsLoaded() then
+		return not sampIsChatInputActive() and not sampIsDialogActive()
+	end
+	return not sampIsChatInputActive() and not sampIsDialogActive() and not isSampfuncsConsoleActive()
+end
+function sampev.onServerMessage(color, text)   
+    if active and text:match(tag..'Данный тип топлива не подходит для вашего транспорта.') --[[and color == -1347440641]] then 
+        return false
+    end
+end
+function sampev.onShowTextDraw(id, data)
+    if active and fill_cars.v then
+        local x, y = math.floor(data.position.x), math.floor(data.position.y)
+        for k, v in pairs(tds) do
+            if x == v.x and y == v.y then
+                tds[k].id = id
+            end
+        end
+        if x == tds['fuel_name'].x and y == tds['fuel_name'].y and fill_cars.v then
+            if data.text == 'DIESEL' then
+                sampAddChatMessage(tag..' {ffffff}Начинаю заправку!', 0xFFff004d)
+                lua_thread.create(function()
+                    wait(150)
+                    sampSendClickTextdraw(tds['max'].id)
+                    wait(click_delay)
+                    for i = 1, 4 do
+                        sampSendClickTextdraw(tds['next'].id)
+                        wait(click_delay)
+                        sampSendClickTextdraw(tds['fill'].id)
+                        wait(click_delay)
+                    end
+                end)
+            end
+        end
+
+        if tds['fuel_name'].id ~= -1 then
+            for k, v in ipairs(ALL_MENU_TDS) do
+                if sampTextdrawIsExists(tds['fuel_name'].id) and v.x == x and v.y == y then 
+                    data.position.y = 600
+                    return {id, data}
+                end
+            end
+        end
+    end
+end
+function getCurrentServer(name)
+	if name:find('Advance RolePlay') then return 1
+	elseif name:find('Samp%-Rp') then return 2
+	elseif name:find('SRP') then return 2
+	elseif name:find('Pears Project') then return 3
+	elseif name:find('Arizona Role Play') then return 4
+	elseif name:find('Diamond Role Play') then return 5
+	elseif name:find('Evolve%-Rp') then return 6 end
+end
+
+
+
+function sampGetPlayerIdByNickname(nick)
+    local _, myid = sampGetPlayerIdByCharHandle(playerPed)
+    if tostring(nick) == sampGetPlayerNickname(myid) then return myid end
+    for i = 0, 1000 do if sampIsPlayerConnected(i) and sampGetPlayerNickname(i) == tostring(nick) then return i end end
+end       
+
+
+function famchatflooder()
+    active = not active
+    sampAddChatMessage(tag.."Флудер семьи " ..(active and "{32CD32}включен" or "{FF0000}выключен"), -1)
+    lua_thread.create(function() 
+        while active do 
+            wait(100)
+            sampSendChat('/fam '..u8:decode(famtext3.v), -1)  
+            wait(famint.v*1000)
+        end
+    end)
+end
+
+function prospam()
+    active = not active
+    sampAddChatMessage(tag.."Флудер организации " ..(active and "{32CD32}работает" or "{FF0000}остановлен"), -1)
+    lua_thread.create(function() 
+        while active do 
+            wait(100)
+            sampSendChat('/fb '..u8:decode(prospamtext1.v), -1) 
+            wait(orgint.v*1000)
+            sampSendChat('/fb '..u8:decode(prospamtext2.v), -1)
+            wait(orgint.v*1000)
+            sampSendChat('/fb '..u8:decode(prospamtext3.v), -1)
+            wait(orgint.v*1000)
+            wait(orgint2.v*1000)
+        end
+    end)
+end
+
+
+function sampev.onSendClientJoin(ver, mod, nick, response, authKey, clientver, unk)
+    ip, port = sampGetCurrentServerAddress()
+    current_server = getCurrentServer(sampGetCurrentServerName())
+end
+
+function autoupdate(json_url, prefix, url)
+    local dlstatus = require('moonloader').download_status
+    local json = getWorkingDirectory() .. '\\'..thisScript().name..'-version.json'
+    if doesFileExist(json) then os.remove(json) end
+    downloadUrlToFile(json_url, json,
+      function(id, status, p1, p2)
+        if status == dlstatus.STATUSEX_ENDDOWNLOAD then
+          if doesFileExist(json) then
+            local f = io.open(json, 'r')
+            if f then
+              local info = decodeJson(f:read('*a'))
+              updatelink = info.updateurl
+              updateversion = info.latest
+              f:close()
+              os.remove(json)
+              if updateversion ~= thisScript().version then
+                lua_thread.create(function(prefix)
+                  local dlstatus = require('moonloader').download_status
+                  local color = -1
+                  sampAddChatMessage((tag..'Обнаружено обновление. Пытаюсь обновиться c '..thisScript().version..' на '..updateversion), color)
+                  wait(250)
+                  downloadUrlToFile(updatelink, thisScript().path,
+                    function(id3, status1, p13, p23)
+                      if status1 == dlstatus.STATUS_DOWNLOADINGDATA then
+                        sampAddChatMessage(string.format('Загружено %d из %d.', p13, p23),1)
+                      elseif status1 == dlstatus.STATUS_ENDDOWNLOADDATA then
+                        sampAddChatMessage(tag..'Загрузка обновления завершена.', -1)
+                        sampAddChatMessage((tag..'Обновление завершено!'), color)
+                        goupdatestatus = true
+                        lua_thread.create(function() wait(500) thisScript():reload() end)
+                      end
+                      if status1 == dlstatus.STATUSEX_ENDDOWNLOAD then
+                        if goupdatestatus == nil then
+                          sampAddChatMessage((tag..'Обновление прошло неудачно. Запускаю устаревшую версию..'), color)
+                          update = false
+                        end
+                      end
+                    end
+                  )
+                  end, prefix
+                )
+              else
+                update = false
+                print('v'..thisScript().version..': Обновление не требуется.')
+                sampAddChatMessage(tag..'v'..thisScript().version..': Обновление не требуется.', -1)
+              end
+            end
+          else
+            print('v'..thisScript().version..': Не могу проверить обновление. Смиритесь или проверьте самостоятельно на '..url)
+            update = false
+          end
+        end
+      end
+    )
+    while update ~= false do wait(100) end
+end
+
+function sampev.onShowDialog(dialogId, style, title, button1, button2, text)
+   if dialogId == 221 and text:find("Deagle") and deaglesklad.v then 
+        sampSendDialogResponse(dialogId, 1, 0, 60)
+        return false
+   end
+   if dialogId == 221 and text:find("Deagle") and m4sklad.v then 
+        sampSendDialogResponse(dialogId, 1, 3, 60)
+        return false
+    end
+    if dialogId == 221 and text:find("Deagle") and shotgunsklad.v then 
+        sampSendDialogResponse(dialogId, 1, 1, 60)
+        return false
+   end
+   if dialogId == 221 and text:find("Deagle") and riflesklad.v then 
+        sampSendDialogResponse(dialogId, 1, 5, 60)
+        return false
+    end
+    if dialogId == 216 and autosklad.v then 
+        sampSendDialogResponse(dialogId, 1, 3, 60)
+        return false
+    end
+    if dialogId == 217 and autosklad.v then 
+        sampSendDialogResponse(dialogId, 1, 3, 60)
+        return false
+    end
+    if dialogId == 991 and text:find("Вы должны подтвердить") then
+        sampSendDialogResponse(dialogId, 1, 0, parolbank.v)    
+        return false 
+    end
+    if dialogId == 1214 and skladsocr.v then
+        return false
+    end
+    if dialogId == 25626 then
+        if not adsend then
+			sampSendDialogResponse(dialogId, 0, 0, '')
+        	return false
+		elseif adsend then
+			sampSendDialogResponse(dialogId, 1, 0, '')
+        	return false
+		end
+    end
+    if dialogId == 25472 and radiols.v then
+        sampSendDialogResponse(dialogId, 1, 0, -1)
+        return false
+    end
+    if dialogId == 25472 and radiolv.v then
+        sampSendDialogResponse(dialogId, 1, 1, -1)
+        return false
+    end
+    if dialogId == 25472 and radiosf.v then
+        sampSendDialogResponse(dialogId, 1, 2, -1)
+        return false
+    end          
+    if dialogId == 15346 then
+        sampSendDialogResponse(dialogId, 1, 0, -1) 
+        return false
+    end
+    if dialogId == 15347 then
+        sampSendDialogResponse(dialogId, 1, 1, -1)
+        return false
+    end
+    if dialogId == 25640 and rp_invite.v then
+        sampSendDialogResponse(dialogId, 1, inv_ranks.v -1, _)
+        return false
+    end
+    if dialogId == 162 and car1.v then
+        sampSendDialogResponse(dialogId, 1, 0, _)
+        sampSendDialogResponse(dialogId, 1, 1, _)
+        sampSendDialogResponse(dialogId, 1, 2, _)
+        sampSendDialogResponse(dialogId, 1, 3, _)
+        sampSendDialogResponse(dialogId, 1, 4, _)
+        sampSendDialogResponse(dialogId, 1, 5, _)
+        sampSendDialogResponse(dialogId, 1, 6, _)
+        sampSendDialogResponse(dialogId, 1, 7, _)
+        return false
+    end
+    if dialogId == 163 and car1.v then
+        sampSendDialogResponse(dialogId, 1, 9, _)
+        return false
+    end
+    if dialogId == 15379 and otmena.v then
+        return false
+    end
+    
+
+end
+
+function naborspam()
+    active = not active
+    sampAddChatMessage(tag.."Флудер набора "..(active and "{32CD32}работает" or "{FF0000}остановлен"), -1)
+    lua_thread.create(function() 
+        while active do 
+            if vipnabor.v then
+                sampProcessChatInput('/vra '..u8:decode(nabortext1.v), -1)
+            else
+                sampSendChat('/vr '..u8:decode(nabortext1.v), -1)
+                wait(1000)
+            end
+            sampSendChat('/fam '..u8:decode(nabortext2.v), -1)
+            wait(1000)
+            sampSendChat('/ad '..u8:decode(nabortext3.v), -1)
+            wait(nabint.v*1000)
+            
+ 
+        end
+    end)
+end
+
+
+function sc()
+	if spawn_cars.v then
+    sampSendChat('/lmenu')
+    sampSendDialogResponse(1214, 1, 4, -1)
+	end
+end
+
+function sk()
+	if sklad.v then 
+    sampSendChat('/lmenu')
+    sampSendDialogResponse(1214, 1, 3, -1)
+end
+end
+
+function fc()
+	if fill_cars.v then
+    sampSendChat('/lmenu')
+    sampSendDialogResponse(1214, 1, 5, -1)
+	end
+end
+
+
+function save()
+    switch(mainIni.mode)
+                {
+                    function ()			
+                        mainIni.settings.rp_invite = rp_invite.v 
+                        mainIni.settings.faminvite = faminvite.v
+                        mainIni.settings.karta = karta.v
+                        mainIni.settings.actnabor = actnabor.v
+                        mainIni.settings.actflood = actflood.v
+                        mainIni.settings.actfam = actfam.v
+                        mainIni.settings.inv_ranks = inv_ranks.v 
+                        mainIni.settings.minlvl = minlvl.v
+                        mainIni.settings.inv_famrank = inv_famrank.v
+                        mainIni.settings.deaglepatrons = deaglepatrons.v
+                        mainIni.settings.m4patrons = m4patrons.v
+                        mainIni.settings.fastmute = fastmute.v
+                        mainIni.settings.fastuval = fastuval.v
+                        mainIni.settings.muteminutes = muteminutes.v
+                        mainIni.settings.prospammer = prospammer.v
+                        mainIni.settings.prospamtext1 = u8:decode(prospamtext1.v)
+                        mainIni.settings.prospamtext2 = u8:decode(prospamtext2.v)
+                        mainIni.settings.prospamtext3 = u8:decode(prospamtext3.v)
+                        mainIni.settings.sbivtext = u8:decode(sbivtext.v)
+                        mainIni.settings.mutetext = u8:decode(mutetext.v)
+                        mainIni.settings.nabortext1 = u8:decode(nabortext1.v)
+                        mainIni.settings.nabortext2 = u8:decode(nabortext2.v)
+                        mainIni.settings.nabortext3 = u8:decode(nabortext3.v)
+                        mainIni.settings.parolbank = u8:decode(parolbank.v)
+                        mainIni.settings.kolvodrugs = kolvodrugs.v
+                        mainIni.settings.nabor = nabor.v
+                        mainIni.settings.nabint = nabint.v
+                        mainIni.settings.orgint = orgint.v
+                        mainIni.settings.orugie = orugie.v
+                        mainIni.settings.orgint2 = orgint2.v
+                        mainIni.settings.famflood = famflood.v
+                        mainIni.settings.autosklad = autosklad.v
+                        mainIni.settings.stylebutton = stylebutton.v
+                        mainIni.settings.car1 = car1.v
+                        mainIni.settings.m4sklad = m4sklad.v
+                        mainIni.settings.bankparol = bankparol.v
+                        mainIni.settings.deaglesklad = deaglesklad.v
+                        mainIni.settings.glavokno = glavokno.v
+                        mainIni.settings.closesklad = closesklad.v
+                        mainIni.settings.skladsocr = skladsocr.v
+                        mainIni.settings.shotgunsklad = shotgunsklad.v
+                        mainIni.settings.riflesklad = riflesklad.v
+                        mainIni.settings.styles = styles.v
+                        mainIni.settings.bind1 = bind1.v
+                        mainIni.settings.bind2 = bind2.v
+                        mainIni.settings.bind3 = bind3.v
+                        mainIni.settings.bind4 = bind4.v
+                        mainIni.settings.bind5 = bind5.v
+                        mainIni.settings.bind6 = bind6.v
+                        mainIni.settings.bind7 = bind7.v
+                        mainIni.settings.bind8 = bind8.v
+                        mainIni.settings.bind9 = bind9.v
+                        mainIni.settings.bind10 = bind10.v
+                        mainIni.settings.vipnabor = vipnabor.v
+                        mainIni.settings.skladarrows = skladarrows.v
+
+                    
+
+                        mainIni.settings.uvaltext = u8:decode(uvaltext.v)
+                        inicfg.save(mainIni, 'fearlesshelper.ini')
+                        sampAddChatMessage(tag.."Настройки успешно сохранены.", -1)
+                        addOneOffSound(0.0, 0.0, 0.0, 1138)
+                        mainIni.mode = 1
+                    end
+                }
+end
+function save2()
+    switch(mainIni.mode)
+                {
+                    function ()			
+                        mainIni.settings.radiols = radiolv.v
+                        mainIni.settings.radiolv = radiolv.v
+                        mainIni.settings.radiosf = radiosf.v
+                        mainIni.settings.otmena = otmena.v
+                        
+                        inicfg.save(mainIni, 'fearlesshelper.ini')
+                        mainIni.mode = 1
+                    end
+                }
+end
+
+
+
+function imgui.CenterTextColoredRGB(text)
+	local width = imgui.GetWindowWidth()
+	local style = imgui.GetStyle()
+	local colors = style.Colors
+	local ImVec4 = imgui.ImVec4
+
+	local explode_argb = function(argb)
+			local a = bit.band(bit.rshift(argb, 24), 0xFF)
+			local r = bit.band(bit.rshift(argb, 16), 0xFF)
+			local g = bit.band(bit.rshift(argb, 8), 0xFF)
+			local b = bit.band(argb, 0xFF)
+			return a, r, g, b
+	end
+
+	local getcolor = function(color)
+			if color:sub(1, 6):upper() == 'SSSSSS' then
+					local r, g, b = colors[1].x, colors[1].y, colors[1].z
+					local a = tonumber(color:sub(7, 8), 16) or colors[1].w * 255
+					return ImVec4(r, g, b, a / 255)
+			end
+			local color = type(color) == 'string' and tonumber(color, 16) or color
+			if type(color) ~= 'number' then return end
+			local r, g, b, a = explode_argb(color)
+			return imgui.ImColor(r, g, b, a):GetVec4()
+	end
+
+	local render_text = function(text_)
+			for w in text_:gmatch('[^\r\n]+') do
+					local textsize = w:gsub('{.-}', '')
+					local text_width = imgui.CalcTextSize(u8(textsize))
+					imgui.SetCursorPosX( width / 2 - text_width .x / 2 )
+					local text, colors_, m = {}, {}, 1
+					w = w:gsub('{(......)}', '{%1FF}')
+					while w:find('{........}') do
+							local n, k = w:find('{........}')
+							local color = getcolor(w:sub(n + 1, k - 1))
+							if color then
+									text[#text], text[#text + 1] = w:sub(m, n - 1), w:sub(k + 1, #w)
+									colors_[#colors_ + 1] = color
+									m = n
+							end
+							w = w:sub(1, n - 1) .. w:sub(k + 1, #w)
+					end
+					if text[0] then
+							for i = 0, #text do
+									imgui.TextColored(colors_[i] or colors[1], u8(text[i]))
+									imgui.SameLine(nil, 0)
+							end
+							imgui.NewLine()
+					else
+							imgui.Text(u8(w))
+					end
+			end
+	end
+	render_text(text)
+end
+
+function imgui.TextColoredRGB(string)
+	local style = imgui.GetStyle()
+	local colors = style.Colors
+	local clr = imgui.Col
+
+	local function color_imvec4(color)
+			if color:upper() == 'SSSSSS' then return colors[clr.Text] end
+			local color = type(color) == 'number' and ('%X'):format(color):upper() or color:upper()
+			local rgb = {}
+			for i = 1, #color/2 do rgb[#rgb+1] = tonumber(color:sub(2*i-1, 2*i), 16) end
+			return imgui.ImVec4(rgb[1]/255, rgb[2]/255, rgb[3]/255, rgb[4] and rgb[4]/255 or colors[clr.Text].w)
+	end
+
+	local function render_text(string)
+			local text, color = {}, {}
+			local m = 1
+			while string:find('{......}') do
+					local n, k = string:find('{......}')
+					text[#text], text[#text+1] = string:sub(m, n-1), string:sub(k+1, #string)
+					color[#color+1] = color_imvec4(string:sub(n+1, k-1))
+					local t1, t2 = string:sub(1, n-1), string:sub(k+1, #string)
+					string = t1..t2
+					m = k-7
+			end
+			if text[0] then
+					for i, _ in ipairs(text) do
+							imgui.TextColored(color[i] or colors[clr.Text], u8(text[i]))
+							imgui.SameLine(nil, 0)
+					end
+					imgui.NewLine()
+			else imgui.Text(u8(string)) end
+	end
+
+	render_text(string)
+end
+
+
+
+
+
+
+
+
+
+
+function remove_all()
+	for i = 1, #coords do
+		if pool[i] ~= nil then
+			removeBlip(pool[i])
+			pool[i] = nil
+		end
+	end
+end
+
+coords = {
+    { 2051.2656, -1156.4294, 23.8502 }, 
+    { 2115.4988, -1095.2936, 24.7771 }, 
+    { 2051.3401, -1041.9553, 26.5127 }, 
+    { 2357.4819, -1133.4607, 28.3938 }, 
+    { 2359.8284, -1171.2126, 28.2831 }, 
+    { 2314.9907, -1200.4818, 28.2262 }, 
+    { 2559.2310, -1109.2358, 64.2670 }, 
+    { 2628.7939, -1124.2505, 66.5594 }, 
+    { 2559.2410, -1241.3362, 48.8187 }, 
+    { 2522.7737, -1233.6808, 45.5962 }, 
+    { 2509.5601, -1126.1271, 41.5980 }, 
+    { 1846.2993, -1066.0305, 24.6667 }, 
+    { 1906.2572, -1208.8391, 19.5152 }, 
+    { 1769.5657, -1269.2799, 14.1775 }, 
+    { 1829.7423, -1383.6549, 15.1998 }, 
+    { 1964.8093, -1360.9491, 18.5781 }, 
+    { 2054.5581, -1326.3584, 24.2201 }, 
+    { 2017.6685, -1353.2582, 24.2693 }, 
+    { 2020.1677, -1284.9058, 24.1846 }, 
+    { 2416.6184, -1354.7859, 25.0912 }, 
+    { 2438.1675, -1344.4335, 30.5403 }, 
+    { 2262.4863, -1440.3964, 24.0092 }, 
+    { 2321.9722, -1454.2347, 21.2680 }, 
+    { 2387.6304, -1482.6478, 24.6273 }, 
+    { 2373.1194, -1489.6899, 28.7267 }, 
+    { 2764.3159, -1182.5099, 69.6838 }, 
+    { 2748.8960, -1244.6897, 60.6338 }, 
+    { 2785.7996, -1415.1720, 16.3880 }, 
+    { 2588.3672, -2061.9470, 4.75751 }, 
+    { 2827.6787, -1160.9064, 25.3925 }, 
+    { 2848.3298, -1942.6093, 12.7612 }, 
+    { 2372.0056, -2114.5867, 27.3039 }, 
+    { 2427.9353, -2027.5251, 13.7694 }, 
+    { 2440.2705, -1981.6669, 13.5469 }, 
+    { 2307.7266, -2009.5165, 19.0014 }, 
+    { 2190.4375, -2029.0265, 13.7296 }, 
+    { 2246.0425, -1931.4435, 13.8074 }, 
+    { 2122.4360, -1933.3767, 13.5469 }, 
+    { 2637.1528, -2024.9476, 13.6671 }, 
+    { 2021.6184, -2093.2749, 19.0454 }, 
+    { 1905.4556, -2136.0786, 15.4430 }, 
+    { 1889.7408, -2010.2220, 13.5469 }, 
+    { 1805.8722, -2083.0471, 13.8553 }, 
+    { 1971.7415, -1535.3516, 11.4262 }, 
+    { 2233.2390, -1700.1475, 22.5497 },
+	{ 2066.9160, -1690.3385, 13.8153 },	
+	{ 1987.8599, -1628.1263, 16.2498 },
+	{ 2145.1350, -1613.7839, 13.7605 },
+	{ 2257.3027, -1620.9314, 15.7393 },
+	{ 2368.2910, -1702.8949, 13.8794 },
+	{ 2527.6074, -1642.2953, 13.9939 },
+	{ 2521.1274, -1670.7814, 15.1195 },
+	{ 2395.9255, -1816.7269, 13.7957 },
+	{ 2376.1086,- 1814.9210, 13.7681 },
+	{ 2019.8030, -1898.4729, 9.16811 },
+	{ 2280.3914, -2113.9587, 13.7744 },
+	{ 2301.2146, -2130.9661, 13.9171 },
+	{ 2323.5144, -2161.7908, 13.8654 },
+	{ 2300.8599, -2232.1970, 13.7277 },
+	{ 2286.2788, -2195.1948, 7.24131 },
+	{ 2219.3274, -2103.9907, 8.03221 },
+	{ 1711.1694, -1852.1277, 13.7792 },
+	{ 1967.8704, -1844.5211, 4.14571 },
+	{ 2093.0811, -1845.7833, 4.03511 },
+	{ 2102.4995, -1639.3700, 13.6343 },
+	{ 2128.6104, -1710.7371, 15.2948 },
+	{ 2346.2971, -1040.7277, 53.9172 },
+	{ 2383.5659, -1941.3464, 13.5469 },
+	{ 2291.5208, -1693.4148, 13.6857 },	
+	{ 1837.9935, -1599.3556, 13.5677 },
+    { 2497.2095, -1793.5551, 14.3287 }
+}
+
+function drmap()
+	state = not state
+	sampAddChatMessage(state and tag..'Карта закладок включена!' or tag..'Карта закладок выключена!', -1)
+	if not state then remove_all() end
+end
+
+
+
+function getCurrentServer(name)
+	if name:find('Advance RolePlay') then return 1
+	elseif name:find('Samp%-Rp') then return 2
+	elseif name:find('Pears Project') then return 3
+	elseif name:find('Arizona') then return 4 end
+end
+
+
+
+function imagenw1()
+    imgui.Image(imagenw, imgui.ImVec2(800, 400))
+end
+
+function imagerifa1()
+    imgui.Image(imagerifa, imgui.ImVec2(800, 400))
+end
+
+function imageballas1()
+    imgui.Image(imageballas, imgui.ImVec2(800, 400))
+end
+
+function imagevagos1()
+    imgui.Image(imagevagos, imgui.ImVec2(800, 400))
+end
+
+function skport()
+    imgui.Image(imageskport, imgui.ImVec2(800, 400))
+end
+
+function pritons1()
+    imgui.Image(priton1, imgui.ImVec2(800, 400))
+end
+function pritons2()
+    imgui.Image(priton2, imgui.ImVec2(800, 400))
+end
+function pritons3()
+    imgui.Image(priton3, imgui.ImVec2(800, 400))
+end
+function pritons4()
+    imgui.Image(priton4, imgui.ImVec2(800, 400))
+end
+function pritons5()
+    imgui.Image(priton5, imgui.ImVec2(800, 400))
+end
+function pritons6()
+    imgui.Image(priton6, imgui.ImVec2(800, 400))
+end
+function pritons7()
+    imgui.Image(priton7, imgui.ImVec2(800, 400))
+end
+function pritons8()
+    imgui.Image(priton8, imgui.ImVec2(800, 400))
+end
+
+
+function radiostation()
+    imgui.Text(u8'Выберите радиостанцию')
+    imgui.NullText()
+    imgui.SameLine()
+    imgui.Checkbox(u8'LS', radiols)
+    
+    
+    imgui.SameLine()
+    imgui.Checkbox(u8'LV', radiolv)
+
+    
+    imgui.SameLine()
+    imgui.Checkbox(u8'SF', radiosf)
+    imgui.NullText()
+    imgui.SameLine()
+    imgui.Text(u8'Скрытие окошка отмены если у вас уже зарегистрировано сообщение')
+    imgui.SameLine()
+    imgui.Checkbox(u8'##87151n', otmena)
+
+
+    
+end
+    
+
